@@ -124,6 +124,7 @@ int main(void)
 	  {
 		  I2C_ClearBusyFlagErratum(&hi2c1, 100);
 	  }
+	 HAL_Delay(100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
