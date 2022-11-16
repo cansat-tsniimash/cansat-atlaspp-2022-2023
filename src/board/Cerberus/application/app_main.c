@@ -8,6 +8,7 @@
 #include <BME280/DriverForBME280.h>
 #include "stm32f4xx.h"
 #include <LSM6DS3/DLSM.h>
+#include <LIS3MDL/DLIS3.h>
 
 extern SPI_HandleTypeDef hspi2;
 
@@ -32,16 +33,27 @@ int app_main(){
 	struct bme280_dev bme;
 	bme_init_default_sr(&bme, &bme_struct);
 
+	stmdev_ctx_t ctx_lsm;
+
 	struct lsm_spi_intf_sr lsm_sr;
 	lsm_sr.sr_pin = 4;
 	lsm_sr.spi = &hspi2;
 	lsm_sr.sr = &shift_reg_n;
-	stmdev_ctx_t ctx;
-	lsmset_sr(&ctx, &lsm_sr);
+	lsmset_sr(&ctx_lsm, &lsm_sr);
+
+	stmdev_ctx_t ctx_lis;
+
+	struct lis_spi_intf_sr lis_sr;
+	lis_sr.sr_pin = 3;
+	lis_sr.spi = &hspi2;
+	lis_sr.sr = &shift_reg_n;
+	lisset_sr(&ctx_lis, &lis_sr);
 
 	float temperature_celsius_gyro = 0.0;
 	float acc_g[3] = {0};
 	float gyro_dps[3] = {0};
+	float temperature_celsius_mag = 0.0;
+	float mag[3] = {0};
 
 	HAL_Delay(100);
 	struct bme280_data bme_data;
@@ -52,7 +64,8 @@ int app_main(){
 		bme_data = bme_read_data(&bme);
 		double pressure = bme_data.pressure;
 		double height = 44330 * (1 - pow(pressure / ground_pressure, 1.0 / 5.255));
-		lsmread(&ctx, &temperature_celsius_gyro, &acc_g, &gyro_dps);
+		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);
+		lisread(&ctx_lis, &temperature_celsius_mag, &mag);
 	}
 	return 0;
 }
