@@ -26,13 +26,24 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef struct main_data{
+	uint32_t	pressure;
 
+	int16_t		temperature;
+
+	float	xyz_acceleration[3];
+
+	float	giroscope_data[3];
+
+	float	magnetometr_data[3];
+
+}main_data_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define I2C_ADDRESS 0x77
-#define I2C_TIMEOUT 10
+#define I2C_TIMEOUT 100
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -90,14 +101,14 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  uint8_t regData[44] = {0};
+  main_data_t data = {0};
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_StatusTypeDef res = HAL_I2C_Slave_Receive(&hi2c1, regData, 44,  I2C_TIMEOUT);
+	  HAL_StatusTypeDef res = HAL_I2C_Slave_Receive(&hi2c1, (uint8_t *)&data, sizeof(data),  I2C_TIMEOUT);
 	  if (res == HAL_BUSY)
 	  {
 		  I2C_ClearBusyFlagErratum(&hi2c1, 100);
