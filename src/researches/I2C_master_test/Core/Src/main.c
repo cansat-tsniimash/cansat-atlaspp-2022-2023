@@ -21,11 +21,22 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "i2c-crutch.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef struct main_data {
+	uint32_t       pressure; //100 000  Pa
+
+	int16_t       temperature;// 30 1C, 0,1C  t*10->int16_t  -->  t/10
+
+	float       xyz_acceleration[3];//+- 15  a*1000
+
+	float       giroscope_data[3];
+
+	float       magnetometer_data[3];
+}main_data_t;
 
 /* USER CODE END PTD */
 
@@ -67,7 +78,18 @@ static void MX_I2C1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	main_data_t main_data;
+	main_data.pressure = 100000;
+	main_data.temperature = -17;
+	main_data.xyz_acceleration[0] = 15;
+	main_data.xyz_acceleration[1] = 15;
+	main_data.xyz_acceleration[2] = 15;
+	main_data.giroscope_data[0] = 10;
+	main_data.giroscope_data[1] = 10;
+	main_data.giroscope_data[2] = 10;
+	main_data.magnetometer_data[0] = 12;
+	main_data.magnetometer_data[1] = 12;
+	main_data.magnetometer_data[2] = 12;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -83,21 +105,25 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  reset_i2c_1();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  uint8_t data = 0x54;
+  uint16_t data_weight = sizeof(main_data);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_I2C_Master_Transmit(&hi2c1, (I2C_ADDRESS << 1), &data, 1,  I2C_TIMEOUT);
+	  HAL_StatusTypeDef res = HAL_I2C_Master_Transmit(&hi2c1, (I2C_ADDRESS << 1), (uint8_t *)&main_data, data_weight,  I2C_TIMEOUT);
+	  if(res == HAL_BUSY)
+	  {
+		  I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
