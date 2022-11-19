@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "i2c-crutch.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -83,21 +83,26 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  reset_i2c_1();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  uint8_t regData = 0;
+  uint8_t regData[44] = {0};
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  HAL_I2C_Slave_Receive(&hi2c1, &regData, 1,  I2C_TIMEOUT);
+	  HAL_StatusTypeDef res = HAL_I2C_Slave_Receive(&hi2c1, regData, 44,  I2C_TIMEOUT);
+	  if (res == HAL_BUSY)
+	  {
+		  I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
