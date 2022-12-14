@@ -57,12 +57,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define oe_Pin GPIO_PIN_13
-#define oe_GPIO_Port GPIOC
-#define latch_Pin GPIO_PIN_1
-#define latch_GPIO_Port GPIOC
+#define oe_s_Pin GPIO_PIN_13
+#define oe_s_GPIO_Port GPIOC
+#define latch_s_Pin GPIO_PIN_1
+#define latch_s_GPIO_Port GPIOC
 #define adc_Pin GPIO_PIN_7
 #define adc_GPIO_Port GPIOA
+#define latch_r_Pin GPIO_PIN_4
+#define latch_r_GPIO_Port GPIOC
+#define oe_r_Pin GPIO_PIN_5
+#define oe_r_GPIO_Port GPIOC
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
