@@ -26,7 +26,7 @@ int app_main(){
 	shift_reg_r.oe_pin = GPIO_PIN_5;
 	shift_reg_r.value = 0;
 	shift_reg_init(&shift_reg_r);
-	shift_reg_push_8(&shift_reg_r, 0xFF);
+	shift_reg_write_8(&shift_reg_r, 0xFF);
 
 	//инциализация GPS
 	gps_init();
@@ -41,7 +41,7 @@ int app_main(){
 	shift_reg_n.oe_pin = GPIO_PIN_13;
 	shift_reg_n.value = 0;
 	shift_reg_init(&shift_reg_n);
-	shift_reg_push_16(&shift_reg_n, 0xFFFF);
+	shift_reg_write_16(&shift_reg_n, 0xFFFF);
 
 
 	/*инициализация bme*/
@@ -125,6 +125,18 @@ int app_main(){
 		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);
 
 		lisread(&ctx_lis, &temperature_celsius_mag, &mag);
+		printf("Coords  %ld %ld %ld\n\r", lat_, lon_, alt_);
+		printf("FIX  %ld\n\r", fix_);
+		if (fix_ >= 1){
+			printf("GPS FIX GOOD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+			shift_reg_write_bit_8(&shift_reg_r, 7, true);
+		}
+		else
+		{
+			shift_reg_write_bit_8(&shift_reg_r, 7, false);
+		}
+
 
 		//каждые 750 мс берет температуру
 		if (HAL_GetTick()-start_time_ds >= 750)
@@ -133,7 +145,9 @@ int app_main(){
 			ds18b20_start_conversion(&ds);
 			start_time_ds = HAL_GetTick();
 			temp_ds /= 16;
+
 		}
+
 	}
 	return 0;
 }
