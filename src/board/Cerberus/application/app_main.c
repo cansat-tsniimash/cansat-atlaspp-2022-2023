@@ -5,6 +5,7 @@
  *      Author: Install
  */
 #include <Shift_Register/shift_reg.h>
+#include <stdio.h>
 #include <BME280/DriverForBME280.h>
 #include "stm32f4xx.h"
 #include <LSM6DS3/DLSM.h>
@@ -91,6 +92,24 @@ typedef struct{
 #pragma pack(pop)
 
 int app_main(){
+	//инициализация файла
+	FATFS fileSystem; // переменная типа FATFS
+	FIL File1; // хендлер файла
+	FIL File2;
+	FIL File3;
+	FIL File4;
+	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res = f_open(&File1, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res = f_open(&File2, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res = f_open(&File3, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res = f_open(&File4, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
 	/*инициализация sr датчика*/
 	shift_reg_t shift_reg_n;
 	shift_reg_n.bus = &hspi2;
@@ -331,10 +350,23 @@ int app_main(){
 			pack3.num += 1;
 			pack1.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
 			pack3.time_s = HAL_GetTick();
-			pack3.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);// <<------pack
+			pack3.crc = Crc16((uint8_t *)&pack3, sizeof(pack3) - 2);// <<------pack
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack1, sizeof(pack1), false);//32
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			start_time_nrf = HAL_GetTick();
+
+
+			FATFS fileSystem; // переменная типа FATFS
+			UINT Bytes; // количество символов, реально записанных внутрь файла
+			FRESULT fatres; // результат выполнения функции
+			const char path[] = "packet1.txt"; // название файла
+			res = f_write(&File1, (uint8_t*) pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
+			res = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			const char path[] = "packet3.txt"; // название файла
+			res = f_write(&File3, (uint8_t*) pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
+			res = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+
+
 			state_nrf = STATE_WAIT;
 			break;
 		case STATE_WAIT:
@@ -379,12 +411,22 @@ int app_main(){
 			pack2.time_s = HAL_GetTick();
 			pack2.num += 1;
 			pack4.num += 1;
-			pack2.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
+			pack2.crc = Crc16((uint8_t *)&pack2, sizeof(pack2) - 2);
 			pack4.time_s = HAL_GetTick();
-			pack4.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
+			pack4.crc = Crc16((uint8_t *)&pack4, sizeof(pack4) - 2);
 			start_time_nrf = HAL_GetTick();
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack2, sizeof(pack2), false);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
+
+			UINT Bytes; // количество символов, реально записанных внутрь файла
+			FRESULT fatres; // результат выполнения функции
+			const char path[] = "packet2.txt"; // название файла
+			res = f_write(&File2, (uint8_t*) pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
+			res = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			const char path[] = "packet4.txt"; // название файла
+			res = f_write(&File4, (uint8_t*) pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
+			res = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+
 			state_nrf = STATE_WAIT;
 			break;
 		}
