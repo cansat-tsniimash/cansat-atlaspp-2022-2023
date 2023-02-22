@@ -17,6 +17,7 @@
 
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
+extern I2C_HandleTypeDef hi2c1;
 //crc count
 uint16_t Crc16(uint8_t *buf, uint16_t len) {
 	uint16_t crc = 0xFFFF;
@@ -243,8 +244,15 @@ int app_main(){
 
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
+
+	uint8_t buf[30] = {4, 5};
 	while(1){
-		//данные в беск цикле
+
+		HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, buf , sizeof(buf), 1);
+
+	}
+
+/*		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
 		double pressure = bme_data.pressure;
 		height = 44330 * (1 - pow(pressure / ground_pressure, 1.0 / 5.255));
@@ -389,6 +397,6 @@ int app_main(){
 			break;
 		}
 	}
-	return 0;
+	return 0;*/
 
 }

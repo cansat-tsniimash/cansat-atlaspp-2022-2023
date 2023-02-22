@@ -9,18 +9,27 @@
 #include <nRF24L01_PL/nrf24_upper_api.h>
 #include <nRF24L01_PL/nrf24_lower_api.h>
 #include <nRF24L01_PL/nrf24_defs.h>
-
+#include "drivers_i2c/Inc/its-i2c-link.h"
 #include <MX25L512_/MX25L512.h>
 extern SPI_HandleTypeDef hspi1;
+extern I2C_HandleTypeDef hi2c1;
 typedef enum
 {
 	CMD_1 = 0x34,
 
 } cmd_t;
 
-
+uint8_t buf[30];
+//uint8_t size;
 int app_main(){
-		bus_t bus;
+	its_i2c_link_start(&hi2c1);
+	while(1)
+	{
+		its_i2c_link_read(buf, sizeof(buf));
+	}
+
+
+	/*	bus_t bus;
 		bus.GPIOx = GPIOB;
 		bus.GPIO_Pin = GPIO_PIN_0;
 		bus.hspi = &hspi1;
@@ -121,8 +130,8 @@ int app_main(){
 
 		nrf24_irq_get(&nrf24, &nrf_irq);
 
-		nrf24_irq_clear(&nrf24, nrf_irq);
+		nrf24_irq_clear(&nrf24, nrf_irq); */
 
-	}
+	//}
 
 }
