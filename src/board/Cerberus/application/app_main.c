@@ -254,7 +254,7 @@ int app_main(){
 
 /*		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
-		double pressure = bme_data.pressure;
+		double pressure = bme_data .pressure;
 		height = 44330 * (1 - pow(pressure / ground_pressure, 1.0 / 5.255));
 		float lux = photorezistor_get_lux(photrez);
 		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);

@@ -25,6 +25,18 @@ int app_main(){
 	its_i2c_link_start(&hi2c1);
 	while(1)
 	{
+		if(READ_BIT(hi2c1.Instance->ISR, I2C_CR1_ERRIE))
+		{
+			I2C_ClearBusyFlagErratum(hi2c1, 1);
+		}
+		if(READ_BIT(hi2c1.Instance->ISR, I2C_ISR_ARLO))
+		{
+			I2C_ClearBusyFlagErratum(hi2c1, 1);
+		}
+		if(READ_BIT(hi2c1.Instance->ISR, I2C_ISR_OVR))
+		{
+			I2C_ClearBusyFlagErratum(hi2c1, 1);
+		}
 		its_i2c_link_read(buf, sizeof(buf));
 	}
 
