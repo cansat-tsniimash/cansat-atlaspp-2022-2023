@@ -22,7 +22,7 @@ typedef enum
 uint8_t buf[30];
 //uint8_t size;
 int app_main(){
-	its_i2c_link_start(&hi2c1);
+	its_i2c_link_start();
 	while(1)
 	{
 		if(READ_BIT(hi2c1.Instance->ISR, I2C_CR1_ERRIE))
