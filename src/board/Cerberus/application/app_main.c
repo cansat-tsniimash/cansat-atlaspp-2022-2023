@@ -15,6 +15,8 @@
 #include <nRF24L01_PL/nrf24_lower_api_stm32.h>
 #include <nRF24L01_PL/nrf24_defs.h>
 
+#include "i2c-crutch.h"
+
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
 extern I2C_HandleTypeDef hi2c1;
@@ -248,7 +250,10 @@ int app_main(){
 	uint8_t buf[30] = {4, 5};
 	while(1){
 
-		HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, buf , sizeof(buf), 1);
+		if (HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, buf , sizeof(buf), 1) == HAL_BUSY)
+		{
+			I2C_ClearBusyFlagErratum(&hi2c1, 100);
+		}
 
 	}
 
