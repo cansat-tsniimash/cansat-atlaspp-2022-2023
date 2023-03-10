@@ -303,17 +303,19 @@ static int _bus_configure(i2c_link_ctx_t * ctx)
 
 	// Настраиваем I2C периферию
 	LL_I2C_InitTypeDef init;
-	LL_I2C_DisableOwnAddress2(bus);
-	LL_I2C_DisableGeneralCall(bus);
-	LL_I2C_EnableClockStretching(bus);
+	LL_I2C_DisableOwnAddress2(I2C1);
+    LL_I2C_DisableGeneralCall(I2C1);
+	LL_I2C_EnableClockStretching(I2C1);
 	init.PeripheralMode = LL_I2C_MODE_I2C;
-	init.ClockSpeed = 100000;
-	init.DutyCycle = LL_I2C_DUTYCYCLE_2;
-	init.OwnAddress1 = I2C_LINK_ADDR << 1;
+	init.Timing = 0x2000090E;
+	init.AnalogFilter = LL_I2C_ANALOGFILTER_ENABLE;
+	init.DigitalFilter = 0;
+	init.OwnAddress1 = 238;
 	init.TypeAcknowledge = LL_I2C_ACK;
 	init.OwnAddrSize = LL_I2C_OWNADDRESS1_7BIT;
-	LL_I2C_Init(bus, &init);
-	LL_I2C_SetOwnAddress2(bus, 0);
+	LL_I2C_Init(I2C1, &init);
+	LL_I2C_EnableAutoEndMode(I2C1);
+	LL_I2C_SetOwnAddress2(I2C1, 0, LL_I2C_OWNADDRESS2_NOMASK);
 
 	// Настраиваем и выключаем прерывания в нвике
 	NVIC_SetPriority(I2C1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),
@@ -520,7 +522,7 @@ static int _link_tx_dispatch(i2c_link_ctx_t * ctx)
 		return rc;
 
 	// передаем!
-	LL_DMA_SetPeriphAddress(dma, channel, LL_I2C_DMA_GetRegAddr(bus));
+	LL_DMA_SetPeriphAddress(dma, channel, LL_I2C_DMA_GetRegAddr(bus, LL_I2C_DMA_REG_DATA_RECEIVE));
 	I2C_LINK_DMA_ENABLE(dma, channel);
 	LL_I2C_EnableDMAReq_TX(bus);
 	return 0;
@@ -686,7 +688,7 @@ static int _link_rx_dispatch(i2c_link_ctx_t * ctx)
 		return rc;
 
 	// принимаем
-	LL_DMA_SetPeriphAddress(dma, channel, LL_I2C_DMA_GetRegAddr(bus));
+	LL_DMA_SetPeriphAddress(dma, channel, LL_I2C_DMA_GetRegAddr(bus, LL_I2C_DMA_REG_DATA_TRANSMIT));
 	I2C_LINK_DMA_ENABLE(dma, channel);
 	LL_I2C_EnableDMAReq_RX(bus);
 	return 0;
