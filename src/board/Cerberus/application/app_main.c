@@ -99,19 +99,26 @@ int app_main(){
 	FIL File2;
 	FIL File3;
 	FIL File4;
-	FRESULT res;
-	const char path[] = "packet1.bin";
-	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
-		res = f_open(&File1, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	FRESULT res1 = 255;
+	FRESULT res2 = 255;
+	FRESULT res3 = 255;
+	FRESULT res4 = 255;
+	const char path1[] = "packet1.bin";
+	const char path2[] = "packet2.bin";
+	const char path3[] = "packet3.bin";
+	const char path4[] = "packet4.bin";
+	FRESULT is_mount = f_mount(&fileSystem, SDPath, 1);
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
-	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
-		res = f_open(&File2, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
-	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
-		res = f_open(&File3, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
-	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
-		res = f_open(&File4, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
 	/*инициализация sr датчика*/
 	shift_reg_t shift_reg_n;
@@ -265,6 +272,14 @@ int app_main(){
 
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
+
+
+							/*ТУТ ВАЙЛ*/
+
+
+
+
+
 	while(1){
 		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
@@ -286,9 +301,9 @@ int app_main(){
 		pack4.crc = 1;
 
 		for (int i = 0; i < 3; i++){
-			pack1.accl[i] = acc_g[i];
+			pack1.accl[i] = acc_g[i]*1000;
 			pack1.gyro[i] = gyro_dps[i];
-			pack1.mag[i] = mag[i];
+			pack1.mag[i] = mag[i]*1000;
 		}
 		for (int i = 0; i < 3; i++)
 		{
@@ -359,15 +374,14 @@ int app_main(){
 			start_time_nrf = HAL_GetTick();
 
 			// --> Тут ты добавил лишнее. fileSystem, Bytes, fatres и path ты уже создавал
-			//FATFS fileSystem; // переменная типа FATFS
-			//UINT Bytes; // количество символов, реально записанных внутрь файла
-			//FRESULT fatres; // результат выполнения функции
-			//const char path[] = "packet1.txt"; // название файла
-			res = f_write(&File1, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
-			res = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
-			//const char path[] = "packet3.txt"; // название файла
-			res = f_write(&File3, (uint8_t*)&pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
-			res = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			if(res1 == FR_OK){
+				res1 = f_write(&File1, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
+				res1 = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			}
+			if(res3 == FR_OK){
+				res3 = f_write(&File3, (uint8_t*)&pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
+				res3 = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			}
 
 
 			state_nrf = STATE_WAIT;
@@ -422,15 +436,14 @@ int app_main(){
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
 
 			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал
-			//UINT Bytes; // количество символов, реально записанных внутрь файла
-			//FRESULT fatres; // результат выполнения функции
-			//const char path[] = "packet2.txt"; // название файла
-			res = f_write(&File2, (uint8_t*)&pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
-			res = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
-			//const char path[] = "packet4.txt"; // название файла
-			res = f_write(&File4, (uint8_t*)&pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
-			res = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
-
+			if(res2 == FR_OK){
+				res2 = f_write(&File2, (uint8_t*)&pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
+				res2 = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			}
+			if(res4 == FR_OK){
+				res4 = f_write(&File4, (uint8_t*)&pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
+				res4 = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			}
 			state_nrf = STATE_WAIT;
 			break;
 		}
