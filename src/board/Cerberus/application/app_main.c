@@ -309,17 +309,17 @@ int app_main(){
 		{
 			pack1.bmp_temp = bme_data.temperature;
 		}
-		pack1.bmp_temp = bme_data.temperature;
+		pack1.bmp_temp = bme_data.temperature*100;
 		pack1.bmp_press = pressure;
 		pack3.status = 1;
 		pack3.fhotorez = lux;
 		pack2.ds_temp = 1;
-		pack2.lat = 1;
-		pack2.lon = 1;
-		pack2.alt = 1;
-		pack2.fix = 1;
-		pack4.gps_time_s = 1;
-		pack4.gps_time_us = 1;
+		pack2.lat = 13;
+		pack2.lon = 14;
+		pack2.alt = 15;
+		pack2.fix = 16;
+		pack4.gps_time_s = 17;
+		pack4.gps_time_us = 18;
 
 		//каждые 750 мс берет температуру
 		if (HAL_GetTick()-start_time_ds >= 750)
