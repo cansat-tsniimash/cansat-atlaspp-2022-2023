@@ -99,6 +99,8 @@ int app_main(){
 	FIL File2;
 	FIL File3;
 	FIL File4;
+	FRESULT res;
+	const char path[] = "packet1.bin";
 	if(f_mount(&fileSystem, SDPath, 1) == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res = f_open(&File1, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
@@ -190,6 +192,7 @@ int app_main(){
 	height += 0;
 	int count = 1;
 	int counter = 0;
+	UINT Bytes;
 
 
 	//структура бме даты
@@ -355,15 +358,15 @@ int app_main(){
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			start_time_nrf = HAL_GetTick();
 
-
-			FATFS fileSystem; // переменная типа FATFS
-			UINT Bytes; // количество символов, реально записанных внутрь файла
-			FRESULT fatres; // результат выполнения функции
-			const char path[] = "packet1.txt"; // название файла
-			res = f_write(&File1, (uint8_t*) pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
+			// --> Тут ты добавил лишнее. fileSystem, Bytes, fatres и path ты уже создавал
+			//FATFS fileSystem; // переменная типа FATFS
+			//UINT Bytes; // количество символов, реально записанных внутрь файла
+			//FRESULT fatres; // результат выполнения функции
+			//const char path[] = "packet1.txt"; // название файла
+			res = f_write(&File1, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
 			res = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
-			const char path[] = "packet3.txt"; // название файла
-			res = f_write(&File3, (uint8_t*) pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
+			//const char path[] = "packet3.txt"; // название файла
+			res = f_write(&File3, (uint8_t*)&pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
 			res = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 
 
@@ -418,13 +421,14 @@ int app_main(){
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack2, sizeof(pack2), false);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
 
-			UINT Bytes; // количество символов, реально записанных внутрь файла
-			FRESULT fatres; // результат выполнения функции
-			const char path[] = "packet2.txt"; // название файла
-			res = f_write(&File2, (uint8_t*) pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
+			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал
+			//UINT Bytes; // количество символов, реально записанных внутрь файла
+			//FRESULT fatres; // результат выполнения функции
+			//const char path[] = "packet2.txt"; // название файла
+			res = f_write(&File2, (uint8_t*)&pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
 			res = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
-			const char path[] = "packet4.txt"; // название файла
-			res = f_write(&File4, (uint8_t*) pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
+			//const char path[] = "packet4.txt"; // название файла
+			res = f_write(&File4, (uint8_t*)&pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
 			res = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 
 			state_nrf = STATE_WAIT;
