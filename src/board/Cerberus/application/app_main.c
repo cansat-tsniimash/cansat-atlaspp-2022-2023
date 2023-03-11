@@ -6,6 +6,7 @@
  */
 #include <Shift_Register/shift_reg.h>
 #include <stdio.h>
+#include <fatfs.h>
 #include <BME280/DriverForBME280.h>
 #include "stm32f4xx.h"
 #include <LSM6DS3/DLSM.h>
@@ -203,7 +204,6 @@ int app_main(){
 	state_now = STATE_READY;
 	state_nrf_t state_nrf;
 	state_nrf = STATE_GEN_PACK_1_3;
-
 
 
 	pack1_t pack1;
