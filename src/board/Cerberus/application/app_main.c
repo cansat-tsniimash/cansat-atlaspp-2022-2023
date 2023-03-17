@@ -33,10 +33,10 @@ uint16_t Crc16(uint8_t *buf, uint16_t len) {
 
 typedef enum
 {
-	STATE_READY = 1,
-	STATE_BEFORE_ROCKET = 2,
-	STATE_IN_ROCKET = 3,
-	STATE_AFTER_ROCKET = 4
+	STATE_READY = 0,
+	STATE_BEFORE_ROCKET = 1,
+	STATE_IN_ROCKET = 2,
+	STATE_AFTER_ROCKET = 3
 } state_t;
 
 typedef enum
@@ -107,7 +107,8 @@ int app_main(){
 	const char path2[] = "packet2.bin";
 	const char path3[] = "packet3.bin";
 	const char path4[] = "packet4.bin";
-	FRESULT is_mount = f_mount(&fileSystem, SDPath, 1);
+	memset(&fileSystem, 0x00, sizeof(fileSystem));
+	FRESULT is_mount = f_mount(&fileSystem, "", 1);
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
@@ -183,6 +184,11 @@ int app_main(){
 	ds18b20_set_config(&ds, 100, -100, DS18B20_RESOLUTION_12_BIT);
 
 	//переменные
+	bool alpha = false;
+	bool beta = false;
+	bool gamma = false;
+	bool mount = false;
+
 	float temperature_celsius_gyro = 0.0;
 	float acc_g[3] = {0};
 	float gyro_dps[3] = {0};
@@ -198,8 +204,10 @@ int app_main(){
 	float limit_lux;
 	height += 0;
 	int count = 1;
+	count += 0;
 	int counter = 0;
 	UINT Bytes;
+	int comp = 0;
 
 
 	//структура бме даты
@@ -241,8 +249,8 @@ int app_main(){
 	nrf24_mode_power_down(&nrf24);
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
-	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
-	nrf_config.rf_channel = 11;
+	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
+	nrf_config.rf_channel = 112;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
@@ -289,6 +297,43 @@ int app_main(){
 		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);
 		lisread(&ctx_lis, &temperature_celsius_mag, &mag);
 
+
+		if(is_mount == FR_OK){
+			mount = true;
+		}
+		else{
+			mount = false;
+		}
+
+		pack3.status = (state_now << 0) | (comp << 13);
+
+		if(alpha){
+			pack3.status |= 1 << 2;
+		}
+		else{
+			pack3.status &= ~(1<<2);
+		}
+		if(beta){
+			pack3.status |= 1<<3;
+		}
+		else{
+			pack3.status &= ~(1<<3);
+		}
+		if(gamma){
+			pack3.status |= 1<<4;
+		}
+		else{
+			pack3.status &= ~(1<<4);
+		}
+		if(mount){
+			pack3.status |= 1<<5;
+		}
+		else{
+			pack3.status &= ~(1<<5);
+		}
+
+
+
 		//packets
 
 		pack1.time_s = 1;
@@ -302,7 +347,7 @@ int app_main(){
 
 		for (int i = 0; i < 3; i++){
 			pack1.accl[i] = acc_g[i]*1000;
-			pack1.gyro[i] = gyro_dps[i];
+			pack1.gyro[i] = gyro_dps[i]*1000; //<-----
 			pack1.mag[i] = mag[i]*1000;
 		}
 		for (int i = 0; i < 3; i++)
@@ -311,7 +356,6 @@ int app_main(){
 		}
 		pack1.bmp_temp = bme_data.temperature*100;
 		pack1.bmp_press = pressure;
-		pack3.status = 1;
 		pack3.fhotorez = lux;
 		pack2.ds_temp = 1;
 		pack2.lat = 13;
@@ -320,7 +364,7 @@ int app_main(){
 		pack2.fix = 16;
 		pack4.gps_time_s = 17;
 		pack4.gps_time_us = 18;
-
+		HAL_Delay(100);
 		//каждые 750 мс берет температуру
 		if (HAL_GetTick()-start_time_ds >= 750)
 		{
@@ -329,6 +373,8 @@ int app_main(){
 			start_time_ds = HAL_GetTick();
 			temp_ds /= 16;
 		}
+
+
 
 
 		switch (state_now)
@@ -373,7 +419,6 @@ int app_main(){
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			start_time_nrf = HAL_GetTick();
 
-			// --> Тут ты добавил лишнее. fileSystem, Bytes, fatres и path ты уже создавал
 			if(res1 == FR_OK){
 				res1 = f_write(&File1, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
 				res1 = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
@@ -388,15 +433,9 @@ int app_main(){
 			break;
 		case STATE_WAIT:
 			if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_2)== GPIO_PIN_RESET){
-				int comp;
+
 				nrf24_irq_get(&nrf24, &comp);
 				nrf24_irq_clear(&nrf24, comp);
-				nrf24_irq_get(&nrf24, &comp);
-				while (comp > 0)
-				{
-					nrf24_irq_clear(&nrf24, comp);
-					nrf24_irq_get(&nrf24, &comp);
-				}
 				nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 				if(tx_status == NRF24_FIFO_EMPTY){
 					counter++;
