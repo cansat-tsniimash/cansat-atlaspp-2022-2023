@@ -105,11 +105,8 @@ int its_i2c_link_read(void * buffer, size_t buffer_size);
 //! Получение статистики модуля
 void its_i2c_link_stats(its_i2c_link_stats_t * statsbuf);
 
-//! Обработчик EVENT прерываний на целевой I2C шине
-void its_i2c_link_it_event_handler(void);
-
-//! Обработчик ERROR прерываний на целевой I2C шине
-void its_i2c_link_it_error_handler(void);
+//! Обработчик прерываний на целевой I2C шине
+void its_i2c_link_it_handler(void);
 
 
 #endif /* I2C_INC_H_ */

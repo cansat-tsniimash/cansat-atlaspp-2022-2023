@@ -5,6 +5,10 @@
  *      Author: Install
  */
 
+#include <stdio.h>
+
+#include "main.h"
+
 #include <nRF24L01_PL/nrf24_lower_api_stm32.h>
 #include <nRF24L01_PL/nrf24_upper_api.h>
 #include <nRF24L01_PL/nrf24_lower_api.h>
@@ -22,22 +26,23 @@ typedef enum
 uint8_t buf[30];
 //uint8_t size;
 int app_main(){
+	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
+
 	its_i2c_link_start();
+
 	while(1)
 	{
-		if(READ_BIT(hi2c1.Instance->ISR, I2C_CR1_ERRIE))
+		int rc = its_i2c_link_read(buf, sizeof(buf));
+		if (rc > 0)
 		{
-			I2C_ClearBusyFlagErratum(hi2c1, 1);
+			printf("rc = %d\n", rc);
+			printf("0x");
+			for (int i = 0; i < rc; i++)
+				printf("%02X", buf[i]);
+
+			printf("\n");
 		}
-		if(READ_BIT(hi2c1.Instance->ISR, I2C_ISR_ARLO))
-		{
-			I2C_ClearBusyFlagErratum(hi2c1, 1);
-		}
-		if(READ_BIT(hi2c1.Instance->ISR, I2C_ISR_OVR))
-		{
-			I2C_ClearBusyFlagErratum(hi2c1, 1);
-		}
-		its_i2c_link_read(buf, sizeof(buf));
 	}
 
 
