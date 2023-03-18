@@ -298,7 +298,7 @@ static int _bus_configure(i2c_link_ctx_t * ctx)
 	LL_I2C_DisableOwnAddress2(bus);
 	LL_I2C_DisableGeneralCall(bus);
 	LL_I2C_EnableClockStretching(bus);
-	LL_I2C_EnableSlaveByteControl(bus);
+	LL_I2C_EnableSlaveByteControl(bus); //fixme
 
 	// Включаем все прерывания на уровне периферии
 	LL_I2C_EnableIT_ADDR(ctx->bus);
@@ -947,7 +947,7 @@ static int _link_event_handler(i2c_link_ctx_t * ctx)
 		// за нас RXNE и TXNE должно обслуживать DMA
 		// Если оно не работает...
 		// Надо все рубить
-		LL_I2C_ClearFlag_BERR(ctx->bus);
+		LL_I2C_ClearFlag_BERR(ctx->bus); // fixme
 		_bus_shutdown(ctx);
 
 		I2C_LINK_DEBUG("btf\n");

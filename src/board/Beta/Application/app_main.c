@@ -17,24 +17,88 @@
 #include <MX25L512_/MX25L512.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
+
+uint8_t flag = 16;
 typedef enum
 {
-	CMD_1 = 0x34,
+	CMD_0 = 0x30,
+	//ну типа да. fixme
+	CMD_1 = 0x31,
+	//управление пьезодинамиком
+	CMD_2 = 0x32,
+	//очистка памяти
+	CMD_3 = 0x33,
+	//чтение памяти
+	CMD_4 = 0x34
+	//запись данных
 
 } cmd_t;
 
 uint8_t buf[30];
-//uint8_t size;
+
+typedef struct
+{
+	uint8_t num;
+	uint8_t size;
+	uint8_t data[36];
+} cmd_pack_t;
+
 int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
 
 	its_i2c_link_start();
 
+
+	cmd_pack_t pack;
+
 	while(1)
 	{
-		int rc = its_i2c_link_read(buf, sizeof(buf));
+		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
+		{
+			switch(pack.num){
+				case CMD_1:
+					if (pack.size == 1)
+					{
+						if (pack.data[0])
+						{
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, 1);
+						}
+					}
+					break;
+				case CMD_2:
+					if(pack.size == 0)
+					{
+						//mx25l512_CE(&bus);
+					}
+
+
+
+				case CMD_3:
+					if ((pack.size = 5) && (pack.data[4] <= 32)){
+						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						//mx25l512_read(&bus, pack.data, data[4]);
+					}
+					break;
+				case CMD_4:
+					if (pack.size > 4 + 1)
+					{
+						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						//mx25l512_PP(&bus, &addr, pack.data + 4, size - 4);
+					}
+			}
+
+
+		}
+
+
+
+
+
+
+
+		/*if (rc > 0)
 		{
 			printf("rc = %d\n", rc);
 			printf("0x");
@@ -42,7 +106,8 @@ int app_main(){
 				printf("%02X", buf[i]);
 
 			printf("\n");
-		}
+
+		\
 	}
 
 
@@ -147,7 +212,7 @@ int app_main(){
 
 		nrf24_irq_get(&nrf24, &nrf_irq);
 
-		nrf24_irq_clear(&nrf24, nrf_irq); */
+		nrf24_irq_clear(&nrf24, nrf_irq);*/
 
 	//}
 
