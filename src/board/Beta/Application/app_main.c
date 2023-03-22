@@ -18,7 +18,10 @@
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
 
+
 uint8_t flag = 16;
+#pragma pack(push,1)
+
 typedef enum
 {
 	CMD_0 = 0x30,
@@ -42,6 +45,8 @@ typedef struct
 	uint8_t size;
 	uint8_t data[36];
 } cmd_pack_t;
+#pragma pack(pop)
+
 
 int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
@@ -63,8 +68,14 @@ int app_main(){
 					{
 						if (pack.data[0])
 						{
-							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, 1);
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
 						}
+						else
+						{
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+
+						}
+
 					}
 					break;
 				case CMD_2:
@@ -88,9 +99,8 @@ int app_main(){
 						//mx25l512_PP(&bus, &addr, pack.data + 4, size - 4);
 					}
 			}
-
-
 		}
+
 
 
 
@@ -214,6 +224,6 @@ int app_main(){
 
 		nrf24_irq_clear(&nrf24, nrf_irq);*/
 
-	//}
+	}
 
 }
