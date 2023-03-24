@@ -46,7 +46,7 @@
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-
+void its_i2c_link_it_handler(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -160,7 +160,7 @@ void DMA1_Channel2_3_IRQHandler(void)
 void I2C1_IRQHandler(void)
 {
   /* USER CODE BEGIN I2C1_IRQn 0 */
-
+  its_i2c_link_it_handler();
   /* USER CODE END I2C1_IRQn 0 */
 
   /* USER CODE BEGIN I2C1_IRQn 1 */
@@ -171,4 +171,3 @@ void I2C1_IRQHandler(void)
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
-

@@ -29,10 +29,16 @@ int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
 
+	while(1)
+	{
+		printf("hello\n");
+	}
 	its_i2c_link_start();
 
 	while(1)
 	{
+		printf("testo\n");
+		continue;
 		int rc = its_i2c_link_read(buf, sizeof(buf));
 		if (rc > 0)
 		{
