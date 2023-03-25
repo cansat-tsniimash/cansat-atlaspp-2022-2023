@@ -363,7 +363,6 @@ int app_main(){
 		pack1.bmp_temp = bme_data.temperature*100;
 		pack1.bmp_press = pressure;
 		pack3.fhotorez = lux;
-		pack2.ds_temp = 1;
 		pack2.lat = 13;
 		pack2.lon = 14;
 		pack2.alt = 15;
@@ -377,9 +376,8 @@ int app_main(){
 			ds18b20_read_raw_temperature(&ds, &temp_ds, &crc_ok_ds);
 			ds18b20_start_conversion(&ds);
 			start_time_ds = HAL_GetTick();
-			temp_ds /= 16;
+			pack2.ds_temp = ((float)temp_ds * 10) / 16;
 		}
-
 
 
 
