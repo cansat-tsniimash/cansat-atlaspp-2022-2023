@@ -103,6 +103,8 @@ int app_main(){
 	FRESULT res2 = 255;
 	FRESULT res3 = 255;
 	FRESULT res4 = 255;
+	FRESULT megares = 255;
+	FRESULT superres = 255;
 	const char path1[] = "packet1.bin";
 	const char path2[] = "packet2.bin";
 	const char path3[] = "packet3.bin";
@@ -201,6 +203,7 @@ int app_main(){
 	bool crc_ok_ds = false;
 	uint32_t start_time_ds = HAL_GetTick();
 	uint32_t start_time_nrf = HAL_GetTick();
+	uint32_t start_time_sd = HAL_GetTick();
 	nrf24_fifo_status_t rx_status = NRF24_FIFO_EMPTY;
 	nrf24_fifo_status_t tx_status = NRF24_FIFO_EMPTY;
 	double height = 0;
@@ -424,11 +427,9 @@ int app_main(){
 
 			if(res1 == FR_OK){
 				res1 = f_write(&File1, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
-				res1 = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 			}
 			if(res3 == FR_OK){
 				res3 = f_write(&File3, (uint8_t*)&pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
-				res3 = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 			}
 
 
@@ -480,15 +481,61 @@ int app_main(){
 			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал
 			if(res2 == FR_OK){
 				res2 = f_write(&File2, (uint8_t*)&pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
-				res2 = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 			}
 			if(res4 == FR_OK){
 				res4 = f_write(&File4, (uint8_t*)&pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
-				res4 = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 			}
 			state_nrf = STATE_WAIT;
 			break;
 		}
+
+
+		if (HAL_GetTick()-start_time_sd >= 20)
+		{
+			megares = FR_OK;
+			if(res1 != FR_OK){
+				f_close(&File1);
+				megares = f_open(&File1, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+			}
+			if(res2 != FR_OK && megares == FR_OK){
+				f_close(&File2);
+				megares = f_open(&File2, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+			}
+			if(res3 != FR_OK && megares == FR_OK){
+				f_close(&File3);
+				megares = f_open(&File3, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+			}
+			if(res4 != FR_OK && megares == FR_OK){
+				f_close(&File4);
+				megares = f_open(&File4, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+			}
+			if(megares != FR_OK || is_mount != FR_OK){
+				shift_reg_write_bit_16(&shift_reg_n, 9, false);
+				f_close(&File1);
+				f_close(&File2);
+				f_close(&File3);
+				f_close(&File4);
+				superres = f_mount(0, "0", 1);
+				extern Disk_drvTypeDef disk;
+				disk.is_initialized[0] = 0;
+				is_mount = f_mount(&fileSystem, "", 1);
+				res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_OPEN_APPEND);
+				res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_OPEN_APPEND);
+				res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_OPEN_APPEND);
+
+			}
+			else
+			{
+				shift_reg_write_bit_16(&shift_reg_n, 9, true);
+				res1 = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+				res2 = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+				res3 = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+				res4 = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			}
+			start_time_sd = HAL_GetTick();
+		}
+
 	}
 	return 0;
 
