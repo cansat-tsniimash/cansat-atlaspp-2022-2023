@@ -108,7 +108,10 @@ int app_main(){
 	const char path3[] = "packet3.bin";
 	const char path4[] = "packet4.bin";
 	memset(&fileSystem, 0x00, sizeof(fileSystem));
-	FRESULT is_mount = f_mount(&fileSystem, "", 1);
+	FRESULT is_mount = 0;
+	extern Disk_drvTypeDef disk;
+	disk.is_initialized[0] = 0;
+	is_mount = f_mount(&fileSystem, "", 1);
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
