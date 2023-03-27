@@ -54,14 +54,20 @@ int app_main(){
 
 	its_i2c_link_start();
 
-
 	cmd_pack_t pack;
 
 	while(1)
 	{
+		uint8_t * frame = (uint8_t*)&pack;
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
 		{
+			printf("got frame: 0x");
+			for (int i = 0; i < rc; i++)
+				printf("%02X", frame[i]);
+
+			printf("\n");
+
 			switch(pack.num){
 				case CMD_1:
 					if (pack.size == 1)
