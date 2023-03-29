@@ -16,6 +16,7 @@
 #include <nRF24L01_PL/nrf24_defs.h>
 
 #include "i2c-crutch.h"
+#include "bb.h"
 
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
@@ -47,7 +48,10 @@ typedef enum
 	STATE_GEN_PACK_2_4 = 3,
 } state_nrf_t;
 
-#pragma pack(push,1) //<-------
+
+
+
+#pragma pack(push,1)
 //структурки пакетиков
 // 31 byte
 typedef struct{
@@ -91,7 +95,18 @@ typedef struct{
 	uint32_t gps_time_us;
 	uint16_t crc;
 }pack4_t;
+//i2c pack
+typedef struct
+{
+    uint8_t num;
+    uint8_t size;
+    uint8_t data[36];
+} i2c_pack_t;
 #pragma pack(pop)
+
+
+
+
 
 int app_main(){
 	/*инициализация sr датчика*/
@@ -246,15 +261,14 @@ int app_main(){
 
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
+	uint8_t size = 8;
+	uint8_t buf[8] = {2, 1, 0, 6, 2, 0, 0, 8};
+	uint32_t addr = 1111;
 
-	uint8_t buf[30] = {4, 5};
+
 	while(1){
-
-		if (HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, buf , sizeof(buf), 1) == HAL_BUSY)
-		{
-			I2C_ClearBusyFlagErratum(&hi2c1, 100);
-		}
-
+		bb_write(addr, buf, size);
+		HAL_Delay(1);
 	}
 
 /*		//данные в беск цикле
