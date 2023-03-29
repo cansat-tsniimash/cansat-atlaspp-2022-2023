@@ -54,105 +54,12 @@ int app_main(){
 
 	its_i2c_link_start();
 
-	cmd_pack_t pack;
-
-	while(1)
-	{
-		uint8_t * frame = (uint8_t*)&pack;
-		int rc = its_i2c_link_read(&pack, sizeof(pack));
-		if (rc > 0)
-		{
-			//printf("got frame: 0x");
-			//for (int i = 0; i < rc; i++)
-			//	printf("%02X", frame[i]);
-
-			//printf("\n");
-
-			switch(pack.num){
-				case CMD_1:
-					if (pack.size == 1)
-					{
-						if (pack.data[0])
-						{
-							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
-						}
-						else
-						{
-							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
-
-						}
-
-					}
-					break;
-				case CMD_2:
-					if(pack.size == 0)
-					{
-						//mx25l512_CE(&bus);
-					}
 
 
-
-				case CMD_3:
-					if ((pack.size = 5) && (pack.data[4] <= 32)){
-						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						//mx25l512_read(&bus, pack.data, data[4]);
-					}
-					break;
-				case CMD_4:
-					if (pack.size > 4 + 1)
-					{
-						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						//mx25l512_PP(&bus, &addr, pack.data + 4, size - 4);
-					}
-			}
-		}
-
-
-
-
-
-
-
-
-		/*if (rc > 0)
-		{
-			printf("rc = %d\n", rc);
-			printf("0x");
-			for (int i = 0; i < rc; i++)
-				printf("%02X", buf[i]);
-
-			printf("\n");
-
-		\
-	}
-
-
-	/*	bus_t bus;
-		bus.GPIOx = GPIOB;
-		bus.GPIO_Pin = GPIO_PIN_0;
-		bus.hspi = &hspi1;
-
-
-		uint32_t addr = 0;
-		uint8_t pData [3] = {0};
-		uint8_t Data [3] = {0xFF, 0xAA, 0xCB};
-
-	HAL_GPIO_WritePin(bus->GPIOx, bus->GPIO_Pin, GPIO_PIN_SET);
-
-	mx25l512_wren(&bus);
-	mx25l512_PP(&bus, &addr, Data, sizeof(Data));
-
-	HAL_GPIO_WritePin(bus->GPIOx, bus->GPIO_Pin, GPIO_PIN_RESET);
-
-	delay(100);
-
-	HAL_GPIO_WritePin(bus->GPIOx, bus->GPIO_Pin, GPIO_PIN_SET);
-
-	mx25l512_read(&bus, &addr, (uint8_t *)&pData, 3);
-	mx25l512_wrdi(&bus);
-
-	HAL_GPIO_WritePin(bus->GPIOx, bus->GPIO_Pin, GPIO_PIN_RESET);
-
+	bus_t bus;
+	bus.GPIOx = GPIOB;
+	bus.GPIO_Pin = GPIO_PIN_0;
+	bus.hspi = &hspi1;
 
 
  //variables
@@ -181,7 +88,7 @@ int app_main(){
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
 	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
 	nrf_config.rf_channel = 11;
-	nrf24_setup_rf(&nrf24, &nrf_config);
+	//nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
 	nrf_protocol_config.address_width = NRF24_ADDRES_WIDTH_5_BYTES;
@@ -190,45 +97,81 @@ int app_main(){
 	nrf_protocol_config.en_dyn_ack = false;
 	nrf_protocol_config.auto_retransmit_count = 15;
 	nrf_protocol_config.auto_retransmit_delay = 15;
-	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, tx_adrr);
+	//nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
+	//nrf24_pipe_set_tx_addr(&nrf24, tx_adrr);
 	//mods
-	nrf24_mode_standby(&nrf24);
+	//nrf24_mode_standby(&nrf24);
+
 	int nrf_irq;
+
+	cmd_pack_t pack;
+
 	while(1){
-		uint8_t buf[3];
-		HAL_I2C_Slave_Receive(&hi2c, buf, sizeof(buf), 10);
-		cmd_t cmd = buf[0];
+		int rc = its_i2c_link_read(&pack, sizeof(pack));
+		if (rc > 0)
+		{
+			switch(pack.num){
+				case CMD_1:
+					if (pack.size == 1)
+					{
+						if (pack.data[0])
+						{
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+						}
+						else
+						{
+							HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
 
-		switch(cmd){
-			case CMD_1:
-				altitude = 5;
-				GPIO_Pin_speak = 1;
-				break;
-			case CMD_2:
+						}
 
-			default:
-		}
+					}
+					break;
+				case CMD_2:
+					if(pack.size == 0)
+					{
+						mx25l512_CE(&bus);
+					}
+					break;
+				case CMD_3:
+					if ((pack.size = 5) && (pack.data[4] <= 32))
+					{
+						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						uint8_t size = pack.data[4];
+						mx25l512_read(&bus, &addr, pack.data, size);
+						pack.size = size;
+						its_i2c_link_write(&pack, sizeof(pack));
+
+					}
+					break;
+				case CMD_4:
+					if (pack.size >= 4 + 1)
+					{
+						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						mx25l512_PP(&bus, &addr, pack.data + 4, pack.size - 4);
+					}
+				}
+			}
 
 
 
 
 
 
-		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
-		if ((tx_status == NRF24_FIFO_EMPTY) || (tx_status == NRF24_FIFO_NOT_EMPTY)){
-				nrf24_fifo_write(&nrf24, (uint8_t *)&packet, 32, false);
-				nrf24_mode_tx(&nrf24);
-				HAL_Delay(10);
-				nrf24_mode_standby(&nrf24);
-		}
-		else if(tx_status == NRF24_FIFO_FULL){
-			nrf24_fifo_flush_tx(&nrf24);
-		}
 
-		nrf24_irq_get(&nrf24, &nrf_irq);
-
-		nrf24_irq_clear(&nrf24, nrf_irq);*/
+//		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
+//		if ((tx_status == NRF24_FIFO_EMPTY) || (tx_status == NRF24_FIFO_NOT_EMPTY)){
+//				nrf24_fifo_write(&nrf24, (uint8_t *)&packet, 32, false);
+//				nrf24_mode_tx(&nrf24);
+//				HAL_Delay(10);
+//				nrf24_mode_standby(&nrf24);
+//		}
+//		else if(tx_status == NRF24_FIFO_FULL){
+//			nrf24_fifo_flush_tx(&nrf24);
+//		}
+//
+//		nrf24_irq_get(&nrf24, &nrf_irq);
+//
+//		nrf24_irq_clear(&nrf24, nrf_irq);
 
 	}
 
