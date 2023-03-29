@@ -62,11 +62,11 @@ int app_main(){
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
 		{
-			printf("got frame: 0x");
-			for (int i = 0; i < rc; i++)
-				printf("%02X", frame[i]);
+			//printf("got frame: 0x");
+			//for (int i = 0; i < rc; i++)
+			//	printf("%02X", frame[i]);
 
-			printf("\n");
+			//printf("\n");
 
 			switch(pack.num){
 				case CMD_1:

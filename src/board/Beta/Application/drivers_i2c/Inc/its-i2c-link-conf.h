@@ -5,7 +5,7 @@
 #include <stm32f0xx_hal.h>
 
 //! Адрес ведомого в 7мибитном формате, с выравниванием по правому краю
-#define I2C_LINK_ADDR (0x42)
+#define I2C_LINK_ADDR (0x77)
 
 // Проритеты I2C прерываний
 #define I2C_LINK_IRQn I2C1_IRQn
@@ -13,7 +13,7 @@
 #define I2C_LINK_IRQ_PRIORITY 1
 
 //! Размер пакета передаваемого/принимаемого за одну транзакцию
-#define I2C_LINK_MAX_PACKET_SIZE (255)
+#define I2C_LINK_MAX_PACKET_SIZE (38)
 
 //! Количество приёмных буферов (каждый по I2C_LINK_PACKET_SIZE байт)
 #define I2C_LINK_RXBUF_COUNT (2)
