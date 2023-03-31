@@ -176,7 +176,7 @@ int app_main(){
 
 	//структура фоторезистора
 	photorezistor_t photrez;
-	photrez.resist = 2000;
+	photrez.resist = 2200;
 	photrez.hadc = &hadc1;
 
 	//структура пин оне ваера
@@ -287,6 +287,9 @@ int app_main(){
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
 
+	shift_reg_write_bit_16(&shift_reg_n, 10, false);
+	shift_reg_write_bit_16(&shift_reg_n, 11, false);
+
 
 							/*ТУТ ВАЙЛ*/
 
@@ -385,17 +388,22 @@ int app_main(){
 		{
 		case STATE_READY:
 			//Связь с ЧЯ
-			if(1){
+
+			if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_BEFORE_ROCKET;
 				limit_lux = lux;
+				shift_reg_write_bit_16(&shift_reg_n, 10, false);
+				shift_reg_write_bit_16(&shift_reg_n, 11, true);
 			}
 			break;
 		case STATE_BEFORE_ROCKET:
 			//проверка признаков нахождения в ракете
-			if(1){
+
+			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_IN_ROCKET;
 				limit_lux = (limit_lux - lux) * 0.8 + lux;
-
+				shift_reg_write_bit_16(&shift_reg_n, 10, true);
+				shift_reg_write_bit_16(&shift_reg_n, 11, false);
 			}
 			break;
 		case STATE_IN_ROCKET:
@@ -403,6 +411,8 @@ int app_main(){
 
 			if(lux >=  limit_lux){
 				state_now = STATE_AFTER_ROCKET;
+				shift_reg_write_bit_16(&shift_reg_n, 10, true);
+				shift_reg_write_bit_16(&shift_reg_n, 11, true);
 			}
 			break;
 		case STATE_AFTER_ROCKET:
@@ -411,6 +421,8 @@ int app_main(){
 			state_now = STATE_AFTER_ROCKET;
 			break;
 		}
+
+
 		switch(state_nrf){
 		case STATE_GEN_PACK_1_3:
 			pack1.time_s = HAL_GetTick();
@@ -491,28 +503,28 @@ int app_main(){
 		if (HAL_GetTick()-start_time_sd >= 20)
 		{
 			megares = FR_OK;
-			if(res1 != FR_OK){
-				f_close(&File1);
-				megares = f_open(&File1, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
-			}
-			if(res2 != FR_OK && megares == FR_OK){
-				f_close(&File2);
-				megares = f_open(&File2, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
-			}
-			if(res3 != FR_OK && megares == FR_OK){
-				f_close(&File3);
-				megares = f_open(&File3, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
-			}
-			if(res4 != FR_OK && megares == FR_OK){
-				f_close(&File4);
-				megares = f_open(&File4, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+
+			if (is_mount == FR_OK)
+			{
+				if(res1 != FR_OK){
+					f_close(&File1);
+					megares = f_open(&File1, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
+				if(res2 != FR_OK && megares == FR_OK){
+					f_close(&File2);
+					megares = f_open(&File2, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
+				if(res3 != FR_OK && megares == FR_OK){
+					f_close(&File3);
+					megares = f_open(&File3, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
+				if(res4 != FR_OK && megares == FR_OK){
+					f_close(&File4);
+					megares = f_open(&File4, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
 			}
 			if(megares != FR_OK || is_mount != FR_OK){
 				shift_reg_write_bit_16(&shift_reg_n, 9, false);
-				f_close(&File1);
-				f_close(&File2);
-				f_close(&File3);
-				f_close(&File4);
 				superres = f_mount(0, "0", 1);
 				extern Disk_drvTypeDef disk;
 				disk.is_initialized[0] = 0;
@@ -521,7 +533,6 @@ int app_main(){
 				res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_OPEN_APPEND);
 				res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_OPEN_APPEND);
 				res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_OPEN_APPEND);
-
 			}
 			else
 			{
