@@ -320,7 +320,9 @@ int app_main(){
 
 
 	while(1){
-		bb_write(addr, buf, size);
+		bb_read_req(addr, size);
+		HAL_Delay(10);
+		bb_read(&addr, buf, size);
 		HAL_Delay(1);
 	}
 

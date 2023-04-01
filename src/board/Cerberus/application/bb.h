@@ -41,6 +41,7 @@ typedef enum i2c_link_cmd_t
 int bb_buzzer_control(bool onoff);
 int bb_chip_err();
 int bb_write(uint32_t addr, uint8_t* buf, uint8_t size);
-int bb_read(uint32_t addr, uint8_t* buf, uint8_t size);
+int bb_read_req(uint32_t addr, uint8_t size);
+int bb_read(uint32_t *addr, uint8_t* buf, uint8_t size);
 
 #endif /* BB_H_ */
