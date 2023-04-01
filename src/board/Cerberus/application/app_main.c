@@ -5,6 +5,8 @@
  *      Author: Install
  */
 #include <Shift_Register/shift_reg.h>
+#include <stdio.h>
+#include <fatfs.h>
 #include <BME280/DriverForBME280.h>
 #include "stm32f4xx.h"
 #include <LSM6DS3/DLSM.h>
@@ -35,10 +37,10 @@ uint16_t Crc16(uint8_t *buf, uint16_t len) {
 
 typedef enum
 {
-	STATE_READY = 1,
-	STATE_BEFORE_ROCKET = 2,
-	STATE_IN_ROCKET = 3,
-	STATE_AFTER_ROCKET = 4
+	STATE_READY = 0,
+	STATE_BEFORE_ROCKET = 1,
+	STATE_IN_ROCKET = 2,
+	STATE_AFTER_ROCKET = 3
 } state_t;
 
 typedef enum
@@ -109,6 +111,39 @@ typedef struct
 
 
 int app_main(){
+	//инициализация файла
+	FATFS fileSystem; // переменная типа FATFS
+	FIL File1; // хендлер файла
+	FIL File2;
+	FIL File3;
+	FIL File4;
+	FRESULT res1 = 255;
+	FRESULT res2 = 255;
+	FRESULT res3 = 255;
+	FRESULT res4 = 255;
+	FRESULT megares = 255;
+	FRESULT superres = 255;
+	const char path1[] = "packet1.bin";
+	const char path2[] = "packet2.bin";
+	const char path3[] = "packet3.bin";
+	const char path4[] = "packet4.bin";
+	memset(&fileSystem, 0x00, sizeof(fileSystem));
+	FRESULT is_mount = 0;
+	extern Disk_drvTypeDef disk;
+	disk.is_initialized[0] = 0;
+	is_mount = f_mount(&fileSystem, "", 1);
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
 	/*инициализация sr датчика*/
 	shift_reg_t shift_reg_n;
 	shift_reg_n.bus = &hspi2;
@@ -159,7 +194,7 @@ int app_main(){
 
 	//структура фоторезистора
 	photorezistor_t photrez;
-	photrez.resist = 2000;
+	photrez.resist = 2200;
 	photrez.hadc = &hadc1;
 
 	//структура пин оне ваера
@@ -172,6 +207,11 @@ int app_main(){
 	ds18b20_set_config(&ds, 100, -100, DS18B20_RESOLUTION_12_BIT);
 
 	//переменные
+	bool alpha = false;
+	bool beta = false;
+	bool gamma = false;
+	bool mount = false;
+
 	float temperature_celsius_gyro = 0.0;
 	float acc_g[3] = {0};
 	float gyro_dps[3] = {0};
@@ -181,13 +221,17 @@ int app_main(){
 	bool crc_ok_ds = false;
 	uint32_t start_time_ds = HAL_GetTick();
 	uint32_t start_time_nrf = HAL_GetTick();
+	uint32_t start_time_sd = HAL_GetTick();
 	nrf24_fifo_status_t rx_status = NRF24_FIFO_EMPTY;
 	nrf24_fifo_status_t tx_status = NRF24_FIFO_EMPTY;
 	double height = 0;
 	float limit_lux;
 	height += 0;
 	int count = 1;
+	count += 0;
 	int counter = 0;
+	UINT Bytes;
+	int comp = 0;
 
 
 	//структура бме даты
@@ -202,7 +246,6 @@ int app_main(){
 	state_now = STATE_READY;
 	state_nrf_t state_nrf;
 	state_nrf = STATE_GEN_PACK_1_3;
-
 
 
 	pack1_t pack1;
@@ -230,8 +273,8 @@ int app_main(){
 	nrf24_mode_power_down(&nrf24);
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
-	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
-	nrf_config.rf_channel = 11;
+	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
+	nrf_config.rf_channel = 112;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
@@ -261,9 +304,19 @@ int app_main(){
 
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
+	
 	uint8_t size = 8;
 	uint8_t buf[8] = {2, 1, 0, 6, 2, 0, 0, 8};
 	uint32_t addr = 1111;
+
+	shift_reg_write_bit_16(&shift_reg_n, 10, false);
+	shift_reg_write_bit_16(&shift_reg_n, 11, false);
+
+
+							/*ТУТ ВАЙЛ*/
+
+
+
 
 
 	while(1){
@@ -279,6 +332,43 @@ int app_main(){
 		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);
 		lisread(&ctx_lis, &temperature_celsius_mag, &mag);
 
+
+		if(is_mount == FR_OK){
+			mount = true;
+		}
+		else{
+			mount = false;
+		}
+
+		pack3.status = (state_now << 0) | (comp << 13);
+
+		if(alpha){
+			pack3.status |= 1 << 2;
+		}
+		else{
+			pack3.status &= ~(1<<2);
+		}
+		if(beta){
+			pack3.status |= 1<<3;
+		}
+		else{
+			pack3.status &= ~(1<<3);
+		}
+		if(gamma){
+			pack3.status |= 1<<4;
+		}
+		else{
+			pack3.status &= ~(1<<4);
+		}
+		if(mount){
+			pack3.status |= 1<<5;
+		}
+		else{
+			pack3.status &= ~(1<<5);
+		}
+
+
+
 		//packets
 
 		pack1.time_s = 1;
@@ -291,51 +381,55 @@ int app_main(){
 		pack4.crc = 1;
 
 		for (int i = 0; i < 3; i++){
-			pack1.accl[i] = acc_g[i];
-			pack1.gyro[i] = gyro_dps[i];
-			pack1.mag[i] = mag[i];
+			pack1.accl[i] = acc_g[i]*1000;
+			pack1.gyro[i] = gyro_dps[i]*1000; //<-----
+			pack1.mag[i] = mag[i]*1000;
 		}
 		for (int i = 0; i < 3; i++)
 		{
 			pack1.bmp_temp = bme_data.temperature;
 		}
-		pack1.bmp_temp = bme_data.temperature;
+		pack1.bmp_temp = bme_data.temperature*100;
 		pack1.bmp_press = pressure;
-		pack3.status = 1;
 		pack3.fhotorez = lux;
-		pack2.ds_temp = 1;
-		pack2.lat = 1;
-		pack2.lon = 1;
-		pack2.alt = 1;
-		pack2.fix = 1;
-		pack4.gps_time_s = 1;
-		pack4.gps_time_us = 1;
-
+		pack2.lat = 13;
+		pack2.lon = 14;
+		pack2.alt = 15;
+		pack2.fix = 16;
+		pack4.gps_time_s = 17;
+		pack4.gps_time_us = 18;
+		HAL_Delay(100);
 		//каждые 750 мс берет температуру
 		if (HAL_GetTick()-start_time_ds >= 750)
 		{
 			ds18b20_read_raw_temperature(&ds, &temp_ds, &crc_ok_ds);
 			ds18b20_start_conversion(&ds);
 			start_time_ds = HAL_GetTick();
-			temp_ds /= 16;
+			pack2.ds_temp = ((float)temp_ds * 10) / 16;
 		}
+
 
 
 		switch (state_now)
 		{
 		case STATE_READY:
 			//Связь с ЧЯ
-			if(1){
+
+			if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_BEFORE_ROCKET;
 				limit_lux = lux;
+				shift_reg_write_bit_16(&shift_reg_n, 10, false);
+				shift_reg_write_bit_16(&shift_reg_n, 11, true);
 			}
 			break;
 		case STATE_BEFORE_ROCKET:
 			//проверка признаков нахождения в ракете
-			if(1){
+
+			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_IN_ROCKET;
 				limit_lux = (limit_lux - lux) * 0.8 + lux;
-
+				shift_reg_write_bit_16(&shift_reg_n, 10, true);
+				shift_reg_write_bit_16(&shift_reg_n, 11, false);
 			}
 			break;
 		case STATE_IN_ROCKET:
@@ -343,6 +437,8 @@ int app_main(){
 
 			if(lux >=  limit_lux){
 				state_now = STATE_AFTER_ROCKET;
+				shift_reg_write_bit_16(&shift_reg_n, 10, true);
+				shift_reg_write_bit_16(&shift_reg_n, 11, true);
 			}
 			break;
 		case STATE_AFTER_ROCKET:
@@ -351,6 +447,8 @@ int app_main(){
 			state_now = STATE_AFTER_ROCKET;
 			break;
 		}
+
+
 		switch(state_nrf){
 		case STATE_GEN_PACK_1_3:
 			pack1.time_s = HAL_GetTick();
@@ -358,23 +456,26 @@ int app_main(){
 			pack3.num += 1;
 			pack1.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
 			pack3.time_s = HAL_GetTick();
-			pack3.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);// <<------pack
+			pack3.crc = Crc16((uint8_t *)&pack3, sizeof(pack3) - 2);// <<------pack
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack1, sizeof(pack1), false);//32
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			start_time_nrf = HAL_GetTick();
+
+			if(res1 == FR_OK){
+				res1 = f_write(&File1, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
+			}
+			if(res3 == FR_OK){
+				res3 = f_write(&File3, (uint8_t*)&pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
+			}
+
+
 			state_nrf = STATE_WAIT;
 			break;
 		case STATE_WAIT:
 			if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_2)== GPIO_PIN_RESET){
-				int comp;
+
 				nrf24_irq_get(&nrf24, &comp);
 				nrf24_irq_clear(&nrf24, comp);
-				nrf24_irq_get(&nrf24, &comp);
-				while (comp > 0)
-				{
-					nrf24_irq_clear(&nrf24, comp);
-					nrf24_irq_get(&nrf24, &comp);
-				}
 				nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 				if(tx_status == NRF24_FIFO_EMPTY){
 					counter++;
@@ -406,15 +507,70 @@ int app_main(){
 			pack2.time_s = HAL_GetTick();
 			pack2.num += 1;
 			pack4.num += 1;
-			pack2.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
+			pack2.crc = Crc16((uint8_t *)&pack2, sizeof(pack2) - 2);
 			pack4.time_s = HAL_GetTick();
-			pack4.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
+			pack4.crc = Crc16((uint8_t *)&pack4, sizeof(pack4) - 2);
 			start_time_nrf = HAL_GetTick();
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack2, sizeof(pack2), false);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
+
+			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал
+			if(res2 == FR_OK){
+				res2 = f_write(&File2, (uint8_t*)&pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
+			}
+			if(res4 == FR_OK){
+				res4 = f_write(&File4, (uint8_t*)&pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
+			}
 			state_nrf = STATE_WAIT;
 			break;
 		}
+
+
+		if (HAL_GetTick()-start_time_sd >= 20)
+		{
+			megares = FR_OK;
+
+			if (is_mount == FR_OK)
+			{
+				if(res1 != FR_OK){
+					f_close(&File1);
+					megares = f_open(&File1, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
+				if(res2 != FR_OK && megares == FR_OK){
+					f_close(&File2);
+					megares = f_open(&File2, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
+				if(res3 != FR_OK && megares == FR_OK){
+					f_close(&File3);
+					megares = f_open(&File3, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
+				if(res4 != FR_OK && megares == FR_OK){
+					f_close(&File4);
+					megares = f_open(&File4, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				}
+			}
+			if(megares != FR_OK || is_mount != FR_OK){
+				shift_reg_write_bit_16(&shift_reg_n, 9, false);
+				superres = f_mount(0, "0", 1);
+				extern Disk_drvTypeDef disk;
+				disk.is_initialized[0] = 0;
+				is_mount = f_mount(&fileSystem, "", 1);
+				res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
+				res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_OPEN_APPEND);
+				res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_OPEN_APPEND);
+				res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_OPEN_APPEND);
+			}
+			else
+			{
+				shift_reg_write_bit_16(&shift_reg_n, 9, true);
+				res1 = f_sync(&File1); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+				res2 = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+				res3 = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+				res4 = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+			}
+			start_time_sd = HAL_GetTick();
+		}
+
 	}
 	return 0;*/
 
