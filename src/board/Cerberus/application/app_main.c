@@ -16,6 +16,7 @@
 #include <nRF24L01_PL/nrf24_upper_api.h>
 #include <nRF24L01_PL/nrf24_lower_api_stm32.h>
 #include <nRF24L01_PL/nrf24_defs.h>
+#include <structs.h>
 
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
@@ -46,52 +47,6 @@ typedef enum
 	STATE_GEN_PACK_2_4 = 3,
 } state_nrf_t;
 
-#pragma pack(push,1) //<-------
-//структурки пакетиков
-// 31 byte
-typedef struct{
-	uint8_t flag;
-	uint16_t num;
-	uint16_t time_s;
-	int16_t accl[3];
-	int16_t gyro[3];
-	int16_t mag[3];
-	uint16_t bmp_temp;
-	uint32_t bmp_press;
-	uint16_t crc;
-}pack1_t;
-//9byte
-typedef struct{
-	uint8_t flag;
-	uint16_t num;
-	uint16_t time_s;
-	uint16_t fhotorez;
-	uint16_t status;
-	uint16_t crc;
-}pack3_t;
-//20byte
-typedef struct{
-	uint8_t flag;
-	uint16_t num;
-	uint16_t time_s;
-	int16_t ds_temp;
-	float lat;
-	float lon;
-	float alt;
-	int8_t fix;
-	uint16_t crc;
-}pack2_t;
-//13byte
-typedef struct{
-	uint8_t flag;
-	uint16_t num;
-	uint16_t time_s;
-	uint32_t gps_time_s;
-	uint32_t gps_time_us;
-	uint16_t crc;
-}pack4_t;
-#pragma pack(pop)
-
 int app_main(){
 	//инициализация файла
 	FATFS fileSystem; // переменная типа FATFS
@@ -99,16 +54,19 @@ int app_main(){
 	FIL File2;
 	FIL File3;
 	FIL File4;
+	FIL File_bin;
 	FRESULT res1 = 255;
 	FRESULT res2 = 255;
 	FRESULT res3 = 255;
 	FRESULT res4 = 255;
+	FRESULT res_bin = 255;
 	FRESULT megares = 255;
 	FRESULT superres = 255;
-	const char path1[] = "packet1.bin";
-	const char path2[] = "packet2.bin";
-	const char path3[] = "packet3.bin";
-	const char path4[] = "packet4.bin";
+	const char path1[] = "packet1.csv";
+	const char path2[] = "packet2.csv";
+	const char path3[] = "packet3.csv";
+	const char path4[] = "packet4.csv";
+	const char path_bin[] = "packet.bin";
 	memset(&fileSystem, 0x00, sizeof(fileSystem));
 	FRESULT is_mount = 0;
 	extern Disk_drvTypeDef disk;
@@ -116,15 +74,22 @@ int app_main(){
 	is_mount = f_mount(&fileSystem, "", 1);
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+		res1 = f_puts("flag; num; time_s; accl1; accl2; accl3; gyro1; gyro2; gyro3; mag1; mag2; mag3; bmp_temp; bmp_press; crc/n", &File1);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+		res2 = f_puts("flag; num; time_s; ds_temp; lat; lon; alt; fix; crc/n", &File2);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+		res3 = f_puts("flag; num; time_s; fhotores; status; crc/n", &File3);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+		res4 = f_puts("flag; num; time_s; gps_time_s; gps_time_us; crc/n", &File4);
+	}
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res_bin = f_open(&File_bin, (char*)path_bin, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
 	/*инициализация sr датчика*/
 	shift_reg_t shift_reg_n;
@@ -296,7 +261,8 @@ int app_main(){
 
 
 
-
+	uint16_t str_wr;
+	char str_buf[300];
 	while(1){
 		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
@@ -436,12 +402,17 @@ int app_main(){
 			start_time_nrf = HAL_GetTick();
 
 			if(res1 == FR_OK){
-				res1 = f_write(&File1, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
+				str_wr = sd_parse_to_bytes_pack1(str_buf, &pack1);
+				res1 = f_write(&File1, str_buf, str_wr, &Bytes); // отправка на запись в файл
 			}
 			if(res3 == FR_OK){
-				res3 = f_write(&File3, (uint8_t*)&pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
+				str_wr = sd_parse_to_bytes_pack3(str_buf, &pack3);
+				res3 = f_write(&File3, str_buf, str_wr, &Bytes); // отправка на запись в файл
 			}
-
+			if(res3 == FR_OK){
+				res_bin = f_write(&File_bin, (uint8_t*)&pack3, sizeof(pack3), &Bytes); // отправка на запись в файл
+				res_bin = f_write(&File_bin, (uint8_t*)&pack1, sizeof(pack1), &Bytes); // отправка на запись в файл
+			}
 
 			state_nrf = STATE_WAIT;
 			break;
@@ -490,10 +461,16 @@ int app_main(){
 
 			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал
 			if(res2 == FR_OK){
-				res2 = f_write(&File2, (uint8_t*)&pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
+				str_wr = sd_parse_to_bytes_pack2(str_buf, &pack2);
+				res2 = f_write(&File2, str_buf, str_wr, &Bytes); // отправка на запись в файл
 			}
 			if(res4 == FR_OK){
-				res4 = f_write(&File4, (uint8_t*)&pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
+				str_wr = sd_parse_to_bytes_pack4(str_buf, &pack4);
+				res4 = f_write(&File4, str_buf, str_wr, &Bytes); // отправка на запись в файл
+			}
+			if(res_bin == FR_OK){
+				res_bin = f_write(&File_bin, (uint8_t*)&pack4, sizeof(pack4), &Bytes); // отправка на запись в файл
+				res_bin = f_write(&File_bin, (uint8_t*)&pack2, sizeof(pack2), &Bytes); // отправка на запись в файл
 			}
 			state_nrf = STATE_WAIT;
 			break;
@@ -522,6 +499,10 @@ int app_main(){
 					f_close(&File4);
 					megares = f_open(&File4, (char*)path1, FA_WRITE | FA_OPEN_APPEND);
 				}
+				if(res_bin != FR_OK && megares == FR_OK){
+					f_close(&File_bin);
+					megares = f_open(&File_bin, (char*)path_bin, FA_WRITE | FA_OPEN_APPEND);
+				}
 			}
 			if(megares != FR_OK || is_mount != FR_OK){
 				shift_reg_write_bit_16(&shift_reg_n, 9, false);
@@ -533,6 +514,7 @@ int app_main(){
 				res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_OPEN_APPEND);
 				res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_OPEN_APPEND);
 				res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_OPEN_APPEND);
+				res_bin = f_open(&File_bin, (char*)path_bin, FA_WRITE | FA_OPEN_APPEND);
 			}
 			else
 			{
@@ -541,6 +523,7 @@ int app_main(){
 				res2 = f_sync(&File2); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 				res3 = f_sync(&File3); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 				res4 = f_sync(&File4); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
+				res_bin = f_sync(&File_bin); // запись в файл (на sd контроллер пишет не сразу, а по закрытии файла. Также можно использовать эту команду)
 			}
 			start_time_sd = HAL_GetTick();
 		}
