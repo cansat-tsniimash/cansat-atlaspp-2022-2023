@@ -309,6 +309,8 @@ int app_main(){
 	uint8_t buf[8] = {2, 1, 0, 6, 2, 0, 0, 8};
 	uint32_t addr = 1111;
 
+	int res = 4;
+
 	shift_reg_write_bit_16(&shift_reg_n, 10, false);
 	shift_reg_write_bit_16(&shift_reg_n, 11, false);
 
@@ -322,7 +324,9 @@ int app_main(){
 	while(1){
 		bb_read_req(addr, size);
 		HAL_Delay(10);
-		bb_read(&addr, buf, size);
+		res = bb_read(&addr, buf, size);
+		while(res != 0)
+			res = bb_read(&addr, buf, size);
 		HAL_Delay(1);
 	}
 
