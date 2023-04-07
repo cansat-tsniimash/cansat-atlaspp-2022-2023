@@ -39,7 +39,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
 
@@ -52,8 +51,9 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_I2C1_Init(void);
+static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -61,7 +61,7 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int app_main();
 /* USER CODE END 0 */
 
 /**
@@ -92,8 +92,9 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_I2C1_Init();
+  MX_DMA_Init();
   MX_SPI1_Init();
+  MX_I2C1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
@@ -103,6 +104,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  app_main();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -123,8 +125,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI48;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -135,11 +138,11 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI48;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -160,37 +163,91 @@ static void MX_I2C1_Init(void)
 {
 
   /* USER CODE BEGIN I2C1_Init 0 */
-
+  return;
   /* USER CODE END I2C1_Init 0 */
+
+  LL_I2C_InitTypeDef I2C_InitStruct = {0};
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+  /**I2C1 GPIO Configuration
+  PA9   ------> I2C1_SCL
+  PA10   ------> I2C1_SDA
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_9;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_4;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_4;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* Peripheral clock enable */
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
+
+  /* I2C1 DMA Init */
+
+  /* I2C1_RX Init */
+  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+
+  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PRIORITY_LOW);
+
+  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MODE_NORMAL);
+
+  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PERIPH_NOINCREMENT);
+
+  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MEMORY_INCREMENT);
+
+  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_BYTE);
+
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_BYTE);
+
+  /* I2C1_TX Init */
+  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+
+  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PRIORITY_LOW);
+
+  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MODE_NORMAL);
+
+  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PERIPH_NOINCREMENT);
+
+  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MEMORY_INCREMENT);
+
+  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PDATAALIGN_BYTE);
+
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MDATAALIGN_BYTE);
+
+  /* I2C1 interrupt Init */
+  NVIC_SetPriority(I2C1_IRQn, 0);
+  NVIC_EnableIRQ(I2C1_IRQn);
 
   /* USER CODE BEGIN I2C1_Init 1 */
 
   /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x2000090E;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Analogue filter
+  /** I2C Initialization
   */
-  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Digital filter
-  */
-  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  LL_I2C_DisableOwnAddress2(I2C1);
+  LL_I2C_DisableGeneralCall(I2C1);
+  LL_I2C_EnableClockStretching(I2C1);
+  I2C_InitStruct.PeripheralMode = LL_I2C_MODE_I2C;
+  I2C_InitStruct.Timing = 0x2000090E;
+  I2C_InitStruct.AnalogFilter = LL_I2C_ANALOGFILTER_ENABLE;
+  I2C_InitStruct.DigitalFilter = 0;
+  I2C_InitStruct.OwnAddress1 = 238;
+  I2C_InitStruct.TypeAcknowledge = LL_I2C_ACK;
+  I2C_InitStruct.OwnAddrSize = LL_I2C_OWNADDRESS1_7BIT;
+  LL_I2C_Init(I2C1, &I2C_InitStruct);
+  LL_I2C_EnableAutoEndMode(I2C1);
+  LL_I2C_SetOwnAddress2(I2C1, 0, LL_I2C_OWNADDRESS2_NOMASK);
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
@@ -220,7 +277,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -269,6 +326,22 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel2_3_IRQn interrupt configuration */
+  NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0);
+  NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 
 }
 
