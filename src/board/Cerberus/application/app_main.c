@@ -74,19 +74,23 @@ int app_main(){
 	is_mount = f_mount(&fileSystem, "", 1);
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		res1 = f_puts("flag; num; time_s; accl1; accl2; accl3; gyro1; gyro2; gyro3; mag1; mag2; mag3; bmp_temp; bmp_press; crc/n", &File1);
+		f_puts("flag; num; time_s; accl1; accl2; accl3; gyro1; gyro2; gyro3; mag1; mag2; mag3; bmp_temp; bmp_press; crc\n", &File1);
+		res1 = f_sync(&File1);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		res2 = f_puts("flag; num; time_s; ds_temp; lat; lon; alt; fix; crc/n", &File2);
+		f_puts("flag; num; time_s; ds_temp; lat; lon; alt; fix; crc\n", &File2);
+		res2 = f_sync(&File2);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		res3 = f_puts("flag; num; time_s; fhotores; status; crc/n", &File3);
+		f_puts("flag; num; time_s; fhotores; status; crc\n", &File3);
+		res3 = f_sync(&File3);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		res4 = f_puts("flag; num; time_s; gps_time_s; gps_time_us; crc/n", &File4);
+		f_puts("flag; num; time_s; gps_time_s; gps_time_us; crc\n", &File4);
+		res4 = f_sync(&File4);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res_bin = f_open(&File_bin, (char*)path_bin, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
