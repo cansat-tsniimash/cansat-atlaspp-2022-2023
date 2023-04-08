@@ -6,6 +6,7 @@
  */
 #include <Shift_Register/shift_reg.h>
 #include <stdio.h>
+#include <string.h>
 #include <fatfs.h>
 #include <BME280/DriverForBME280.h>
 #include "stm32f4xx.h"
@@ -17,6 +18,7 @@
 #include <nRF24L01_PL/nrf24_lower_api_stm32.h>
 #include <nRF24L01_PL/nrf24_defs.h>
 #include <structs.h>
+#include <csv_file.h>
 
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
