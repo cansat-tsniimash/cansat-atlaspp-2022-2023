@@ -298,7 +298,7 @@ static int _bus_configure(i2c_link_ctx_t * ctx)
 	LL_I2C_DisableOwnAddress2(bus);
 	LL_I2C_DisableGeneralCall(bus);
 	LL_I2C_EnableClockStretching(bus);
-	LL_I2C_EnableSlaveByteControl(bus); //fixme
+	LL_I2C_DisableSlaveByteControl(bus);
 
 	// Включаем все прерывания на уровне периферии
 	LL_I2C_EnableIT_ADDR(ctx->bus);
@@ -419,7 +419,7 @@ static int _link_tx_setup_for_packet_size(i2c_link_ctx_t * ctx)
 	ctx->state = I2C_LINK_STATE_TX_PACKET_SIZE;
 
 	ctx->stats.tx_psize_start_cnt++;
-	I2C_LINK_DEBUG("tx psize begun\n");
+	I2C_LINK_DEBUG("tx psize %d begun\n", buf->packet_size);
 	return 0;
 }
 
@@ -523,6 +523,9 @@ static int _link_tx_done(i2c_link_ctx_t * ctx)
 	{
 		// Таймаутов нет, только вотчдог, только так
 	}
+
+	// Чистим TX регистр
+	LL_I2C_ClearFlag_TXE(bus);
 
 	// смотрим в каком мы там были состоянии
 	switch (ctx->state)
@@ -846,29 +849,6 @@ static int _link_event_handler(i2c_link_ctx_t * ctx)
 
 	I2C_LINK_DEBUG("evt 0x%04lX\n", isr);
 
-	if (isr & I2C_ISR_ADDR)
-	{
-		LL_I2C_ClearFlag_ADDR(ctx->bus);
-		I2C_LINK_DEBUG("addr\n");
-
-		// Кто-то на шине назвал наш адрес!
-		// нужно понять он просит нас принять данные или отдать
-		if (isr & I2C_ISR_DIR)
-		{
-			// нужно отдавать, окей, отдаем
-			rc = _link_tx_dispatch(ctx);
-		}
-		else
-		{
-			// нужно принимать. Окей, это мы тоже умеем
-			rc = _link_rx_dispatch(ctx);
-		}
-		// Если мы не смогли адекватно отреагировать
-		// на начало транзакции... Плохи наши дела
-		// TODO: что-нибудь с этим сделать
-		assert(0 == rc);
-	}
-
 	if (isr & I2C_ISR_STOPF)
 	{
 		LL_I2C_ClearFlag_STOP(ctx->bus);
@@ -962,6 +942,31 @@ static int _link_event_handler(i2c_link_ctx_t * ctx)
 		// Грузимся по жесткому
 		abort();
 	}
+
+
+	if (isr & I2C_ISR_ADDR)
+	{
+		LL_I2C_ClearFlag_ADDR(ctx->bus);
+		I2C_LINK_DEBUG("addr\n");
+
+		// Кто-то на шине назвал наш адрес!
+		// нужно понять он просит нас принять данные или отдать
+		if (isr & I2C_ISR_DIR)
+		{
+			// нужно отдавать, окей, отдаем
+			rc = _link_tx_dispatch(ctx);
+		}
+		else
+		{
+			// нужно принимать. Окей, это мы тоже умеем
+			rc = _link_rx_dispatch(ctx);
+		}
+		// Если мы не смогли адекватно отреагировать
+		// на начало транзакции... Плохи наши дела
+		// TODO: что-нибудь с этим сделать
+		assert(0 == rc);
+	}
+
 
 	return 0;
 }

@@ -107,6 +107,9 @@ int app_main(){
 	cmd_pack_t pack;
 
 	while(1){
+		const char hello[] = "hello i'm a bus";
+		int rrc = its_i2c_link_write(hello, sizeof(hello));
+
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
 		{
