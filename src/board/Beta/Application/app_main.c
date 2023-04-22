@@ -65,22 +65,24 @@ int app_main(){
  //variables
 	uint64_t tx_adrr = 0xafafafaf01;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
-	uint16_t packet = 123;
+	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
 	nrf24_fifo_status_t rx_status;
 //settings
 	shift_reg_t shift_reg;
 	shift_reg.bus = &hspi1;
-	shift_reg.latch_port = GPIOA;
+	shift_reg.latch_port = GPIOB;
 	shift_reg.latch_pin = GPIO_PIN_1;
-	shift_reg.oe_port = GPIOA;
-	shift_reg.oe_pin = GPIO_PIN_2;
+	shift_reg.oe_port = GPIOB;
+	shift_reg.oe_pin = GPIO_PIN_1;
 	shift_reg_init(&shift_reg);
+	shift_reg_write_8(&shift_reg, 0x70);
+	HAL_Delay(10);
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
-	nrf_pins.pos_CE = 1;
-	nrf_pins.pos_CS = 2;
+	nrf_pins.pos_CE = 5;
+	nrf_pins.pos_CS = 4;
 	nrf24_lower_api_config_t nrf24;
 	nrf24_spi_init_sr(&nrf24, &hspi1, &nrf_pins);
 
@@ -88,7 +90,7 @@ int app_main(){
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
 	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
 	nrf_config.rf_channel = 11;
-	//nrf24_setup_rf(&nrf24, &nrf_config);
+	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
 	nrf_protocol_config.address_width = NRF24_ADDRES_WIDTH_5_BYTES;
@@ -97,17 +99,22 @@ int app_main(){
 	nrf_protocol_config.en_dyn_ack = false;
 	nrf_protocol_config.auto_retransmit_count = 15;
 	nrf_protocol_config.auto_retransmit_delay = 15;
-	//nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	//nrf24_pipe_set_tx_addr(&nrf24, tx_adrr);
+	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
+	nrf24_pipe_set_tx_addr(&nrf24, tx_adrr);
 	//mods
-	//nrf24_mode_standby(&nrf24);
+	nrf24_mode_standby(&nrf24);
+	nrf24_mode_tx(&nrf24);
 
 	int nrf_irq;
 
 	cmd_pack_t pack;
 
 	while(1){
-		const char hello[] = "hello i'm a bus";
+		shift_reg_write_bit_8(&shift_reg, 7, 1);
+		HAL_Delay(100);
+		shift_reg_write_bit_8(&shift_reg, 7, 0);
+		HAL_Delay(100);
+		/*const char hello[] = "hello i'm a bus";
 		int rrc = its_i2c_link_write(hello, sizeof(hello));
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
@@ -153,29 +160,27 @@ int app_main(){
 						mx25l512_PP(&bus, &addr, pack.data + 4, pack.size - 4);
 					}
 				}
-			}
+			}*/
 
 
 
 
 
 
+		nrf24_fifo_write(&nrf24, (uint8_t *)&packet, 1, false);
+		HAL_Delay(100);
+		/*nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
+		if ((tx_status == NRF24_FIFO_EMPTY) || (tx_status == NRF24_FIFO_NOT_EMPTY)){
+				nrf24_fifo_write(&nrf24, (uint8_t *)&packet, 32, false);
+		}
+		else if(tx_status == NRF24_FIFO_FULL){
+			nrf24_fifo_flush_tx(&nrf24);
+		}
 
-//		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
-//		if ((tx_status == NRF24_FIFO_EMPTY) || (tx_status == NRF24_FIFO_NOT_EMPTY)){
-//				nrf24_fifo_write(&nrf24, (uint8_t *)&packet, 32, false);
-//				nrf24_mode_tx(&nrf24);
-//				HAL_Delay(10);
-//				nrf24_mode_standby(&nrf24);
-//		}
-//		else if(tx_status == NRF24_FIFO_FULL){
-//			nrf24_fifo_flush_tx(&nrf24);
-//		}
-//
-//		nrf24_irq_get(&nrf24, &nrf_irq);
-//
-//		nrf24_irq_clear(&nrf24, nrf_irq);
+		nrf24_irq_get(&nrf24, &nrf_irq);
 
+		nrf24_irq_clear(&nrf24, nrf_irq);
+*/
 	}
 
 }
