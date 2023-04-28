@@ -14,21 +14,26 @@
 #include "i2c-crutch.h"
 #include "string.h"
 
-
 typedef enum
 {
-    CMD_0 = 0x30,
-    //ну типа да. fixme
-    CMD_1 = 0x31,
-    //управление пьезодинамиком
-    CMD_2 = 0x32,
-    //очистка памяти
-    CMD_3 = 0x33,
-    //чтение памяти
-    CMD_4 = 0x34
-    //запись данных
+	CMD_BUZ = 0x31,
+	//управление пьезодинамиком
+	CMD_CE = 0x32,
+	//очистка памяти
+	CMD_Read = 0x33,
+	//чтение ПАМЯТИ
+	CMD_Write = 0x34,
+	//запись данных
+	CMD_ReadADDR = 0x35,
+	//Чтение по АДРЕСУ
+	CMD_Continue = 0x36,
+	//Продолжаю
+	CMD_CE_GPS = 0x37,
+	//выключить питание
+	CMD_OFF = 0x38
 
 } cmd_t;
+
 
 typedef enum i2c_link_cmd_t
 {
