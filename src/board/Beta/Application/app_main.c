@@ -45,7 +45,20 @@ typedef struct
 	uint8_t size;
 	uint8_t data[36];
 } cmd_pack_t;
+
+typedef struct
+{
+	uint8_t flag;
+	uint16_t num;
+	uint16_t time_s;
+	float lat;
+	float lon;
+	float alt;
+	int8_t fix;
+	uint16_t crc;
+} nrf_pack_t;
 #pragma pack(pop)
+
 
 
 int app_main(){
@@ -73,7 +86,7 @@ int app_main(){
 	shift_reg.bus = &hspi1;
 	shift_reg.latch_port = GPIOB;
 	shift_reg.latch_pin = GPIO_PIN_1;
-	shift_reg.oe_port = GPIOB;
+	shift_reg.oe_port = GPIOA;
 	shift_reg.oe_pin = GPIO_PIN_1;
 	shift_reg_init(&shift_reg);
 	shift_reg_write_8(&shift_reg, 0x70);
@@ -106,8 +119,9 @@ int app_main(){
 	nrf24_mode_tx(&nrf24);
 
 	int nrf_irq;
-
+	uint32_t start_time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
+	nrf_pack_t nrf_pack;
 
 	while(1){
 		shift_reg_write_bit_8(&shift_reg, 7, 1);
@@ -167,20 +181,18 @@ int app_main(){
 
 
 
-		nrf24_fifo_write(&nrf24, (uint8_t *)&packet, 1, false);
-		HAL_Delay(100);
-		/*nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
-		if ((tx_status == NRF24_FIFO_EMPTY) || (tx_status == NRF24_FIFO_NOT_EMPTY)){
-				nrf24_fifo_write(&nrf24, (uint8_t *)&packet, 32, false);
+		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
+		if (tx_status != NRF24_FIFO_FULL){
+				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(&nrf_pack), false);
+				start_time_nrf = HAL_GetTick();
 		}
-		else if(tx_status == NRF24_FIFO_FULL){
+		else
+		if (HAL_GetTick()-start_time_nrf >= 100)
+		{
 			nrf24_fifo_flush_tx(&nrf24);
+			nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(&nrf_pack), false);
+			start_time_nrf = HAL_GetTick();
 		}
-
-		nrf24_irq_get(&nrf24, &nrf_irq);
-
-		nrf24_irq_clear(&nrf24, nrf_irq);
-*/
 	}
 
 }
