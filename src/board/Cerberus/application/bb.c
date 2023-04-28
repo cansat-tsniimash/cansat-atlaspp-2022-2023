@@ -6,7 +6,12 @@
  */
 
 #include "bb.h"
-
+#include <stdio.h>
+#include "main.h"
+#include <nRF24L01_PL/nrf24_lower_api_stm32.h>
+#include <nRF24L01_PL/nrf24_upper_api.h>
+#include <nRF24L01_PL/nrf24_lower_api.h>
+#include <nRF24L01_PL/nrf24_defs.h>
 #pragma pack(push,1)
 typedef struct
 {
@@ -19,6 +24,7 @@ typedef struct
 extern I2C_HandleTypeDef hi2c1;
 
 #define I2C_TIMEOUT 10
+#define I2C_ADDRES (0x77 << 1)
 
 int bb_buzzer_control(bool onoff)
 {
@@ -27,7 +33,7 @@ int bb_buzzer_control(bool onoff)
 	i2c_pack.num = CMD_BUZ;
 	i2c_pack.size = 1;
 	i2c_pack.data[0] = onoff;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -36,7 +42,7 @@ int bb_buzzer_control(bool onoff)
 	{
 		return rc;
 	}
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -50,7 +56,7 @@ int bb_chip_err()
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_CE;
 	i2c_pack.size = 0;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -59,7 +65,7 @@ int bb_chip_err()
 	{
 		return rc;
 	}
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -73,7 +79,7 @@ int bb_gps_err()
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_CE_GPS;
 	i2c_pack.size = 0;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -82,7 +88,7 @@ int bb_gps_err()
 	{
 		return rc;
 	}
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -99,7 +105,7 @@ int bb_read_req_addr(uint32_t addr, uint8_t size){
 	 	i2c_pack.data[4] = 32;
 	else
 	 	i2c_pack.data[4] = size;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -108,7 +114,7 @@ int bb_read_req_addr(uint32_t addr, uint8_t size){
 	{
 	 	return rc;
 	}
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -125,7 +131,7 @@ int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size)
  	uint16_t size_mes = 0;
 	i2c_pack_t i2c_pack;
 	uint8_t cmd = I2C_LINK_CMD_GET_SIZE;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, 1, I2C_TIMEOUT);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, 1, I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -135,7 +141,7 @@ int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size)
 	 	return rc;
 	}
 	HAL_Delay(10);
-	rc = HAL_I2C_Master_Receive(&hi2c1, 0x77<<1, (uint8_t *)&size_mes, 2, I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Receive(&hi2c1, I2C_ADDRES, (uint8_t *)&size_mes, 2, I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -148,7 +154,7 @@ int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size)
 		return 4;
 	}
 	cmd = I2C_LINK_CMD_GET_PACKET;
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, 1, I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, 1, I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -157,7 +163,7 @@ int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size)
 	{
 	 	return rc;
 	}
-	rc = HAL_I2C_Master_Receive(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Receive(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -166,26 +172,27 @@ int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size)
 	{
 	 	return rc;
 	}
-	memcpy(addr, &i2c_pack.data + 4, 4);
-	if(i2c_pack.size < size)
-				memcpy(buf, &i2c_pack.data + 4, i2c_pack.size);
-	if(i2c_pack.size > size)
-				memcpy(buf, &i2c_pack.data + 4, size);
+	memcpy(addr, &i2c_pack.data, 4);
+	if(i2c_pack.size - 5 < size)
+		memcpy(buf, &i2c_pack.data + 5, i2c_pack.size);
+	if(i2c_pack.size - 5 > size)
+		memcpy(buf, &i2c_pack.data + 5, size);
 	return rc;
 }
 
-int bb_read_req(uint8_t size){
-	uint32_t addr = 0x0000;
+int bb_read_req(uint8_t size, bool is_continue){
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
-	i2c_pack.num = CMD_Read;
-	i2c_pack.size = 5;
-	memcpy(i2c_pack.data, &addr, 4);
+	if(!is_continue)
+		i2c_pack.num = CMD_Read;
+	else
+		i2c_pack.num = CMD_Continue;
+	i2c_pack.size = 1;
 	if (size > 32)
 	 	i2c_pack.data[0] = 32;
 	else
-	 	i2c_pack.data[4] = size;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	 	i2c_pack.data[0] = size;
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -194,7 +201,7 @@ int bb_read_req(uint8_t size){
 	{
 	 	return rc;
 	}
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -206,13 +213,12 @@ int bb_read_req(uint8_t size){
 	return rc;
 }
 
-int bb_read( uint8_t* buf, uint8_t size)
+int bb_read(uint8_t* buf, uint8_t size)
 {
-	uint32_t addr = 0x0000;
  	uint16_t size_mes = 0;
 	i2c_pack_t i2c_pack;
 	uint8_t cmd = I2C_LINK_CMD_GET_SIZE;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, 1, I2C_TIMEOUT);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, 1, I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -222,7 +228,7 @@ int bb_read( uint8_t* buf, uint8_t size)
 	 	return rc;
 	}
 	HAL_Delay(10);
-	rc = HAL_I2C_Master_Receive(&hi2c1, 0x77<<1, (uint8_t *)&size_mes, 2, I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Receive(&hi2c1, I2C_ADDRES, (uint8_t *)&size_mes, 2, I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -235,7 +241,7 @@ int bb_read( uint8_t* buf, uint8_t size)
 		return 4;
 	}
 	cmd = I2C_LINK_CMD_GET_PACKET;
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, 1, I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, 1, I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -244,7 +250,7 @@ int bb_read( uint8_t* buf, uint8_t size)
 	{
 	 	return rc;
 	}
-	rc = HAL_I2C_Master_Receive(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Receive(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -253,16 +259,11 @@ int bb_read( uint8_t* buf, uint8_t size)
 	{
 	 	return rc;
 	}
-	memcpy(addr, &i2c_pack.data + 4, 4);
-	if(i2c_pack.size < size)
-				memcpy(buf, &i2c_pack.data + 4, i2c_pack.size);
-	if(i2c_pack.size > size)
-				memcpy(buf, &i2c_pack.data + 4, size);
 	return rc;
 }
 
 
-int bb_write(uint32_t addr, uint8_t* buf, uint8_t size)
+int bb_write(uint8_t* buf, uint8_t size)
 {
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
@@ -271,11 +272,10 @@ int bb_write(uint32_t addr, uint8_t* buf, uint8_t size)
 		i2c_pack.size = 32;
 	}
 	else{
-		i2c_pack.size = size + 4;
+		i2c_pack.size = size;
 	}
-	memcpy(i2c_pack.data, &addr, 4);
-	memcpy(i2c_pack.data + 4, buf, i2c_pack.size-4);
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	memcpy(i2c_pack.data, buf, i2c_pack.size);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -284,7 +284,7 @@ int bb_write(uint32_t addr, uint8_t* buf, uint8_t size)
 	{
 		return rc;
 	}
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -296,7 +296,7 @@ int bb_off(){
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_OFF;
 	i2c_pack.size = 0;
-	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
@@ -305,10 +305,217 @@ int bb_off(){
 	{
 		return rc;
 	}
-	rc = HAL_I2C_Master_Transmit(&hi2c1, 0x77<<1, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
 	if (rc == HAL_BUSY)
 	{
 		I2C_ClearBusyFlagErratum(&hi2c1, 100);
 	}
 	return rc;
 }
+
+int bb_read_gps_req(uint16_t num){
+	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
+	i2c_pack_t i2c_pack;
+	i2c_pack.num = CMD_Read_gps;
+	i2c_pack.size = 2;
+	memcpy(i2c_pack.data, &num, 2);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+	 	return rc;
+	}
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+	 	return rc;
+	}
+	return rc;
+}
+
+int bb_read_gps(uint16_t *num, uint8_t* buf, uint8_t size)
+{
+ 	uint16_t size_mes = 0;
+	i2c_pack_t i2c_pack;
+	uint8_t cmd = I2C_LINK_CMD_GET_SIZE;
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, 1, I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+	 	return rc;
+	}
+	HAL_Delay(10);
+	rc = HAL_I2C_Master_Receive(&hi2c1, I2C_ADDRES, (uint8_t *)&size_mes, 2, I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+	 	return rc;
+	}
+	if(size_mes == 32){
+		return 4;
+	}
+	cmd = I2C_LINK_CMD_GET_PACKET;
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, 1, I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+	 	return rc;
+	}
+	rc = HAL_I2C_Master_Receive(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+	 	return rc;
+	}
+	memcpy(num, &i2c_pack.data, 2);
+	if(i2c_pack.size - 2 < size)
+		memcpy(buf, &i2c_pack.data + 2, i2c_pack.size);
+	if(i2c_pack.size - 2 > size)
+		memcpy(buf, &i2c_pack.data + 2, size);
+	return rc;
+}
+
+int bb_write_flys_bit(bool onoff)
+{
+	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
+	i2c_pack_t i2c_pack;
+	i2c_pack.num = CMD_Write_flys_bit;
+	i2c_pack.size = 1;
+	i2c_pack.data[0] = onoff;
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+		return rc;
+	}
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	return rc;
+}
+
+int bb_radio_send(uint8_t* buf, uint8_t size){
+	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
+	i2c_pack_t i2c_pack;
+	i2c_pack.num = CMD_Radio_send;
+	if (size > 32){
+		i2c_pack.size = 32;
+	}
+	else{
+		i2c_pack.size = size;
+	}
+	memcpy(i2c_pack.data, buf, i2c_pack.size);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+		return rc;
+	}
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	return rc;
+}
+
+int bb_radio_send_d(uint8_t* buf, uint8_t size){
+	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
+	i2c_pack_t i2c_pack;
+	i2c_pack.num = CMD_Radio_send_d;
+	if (size > 32){
+		i2c_pack.size = 32;
+	}
+	else{
+		i2c_pack.size = size;
+	}
+	memcpy(i2c_pack.data, buf, i2c_pack.size);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+		return rc;
+	}
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	return rc;
+}
+
+int bb_settings_pack(settings_pack_t *settings_pack)
+{
+	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
+	i2c_pack_t i2c_pack;
+	i2c_pack.num = CMD_Settings;
+    i2c_pack.size = 18;
+
+	memcpy(i2c_pack.data, settings_pack, i2c_pack.size);
+	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	if (rc != HAL_OK)
+	{
+		return rc;
+	}
+	rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, (uint8_t *)&i2c_pack, sizeof(i2c_pack), I2C_TIMEOUT);
+	if (rc == HAL_BUSY)
+	{
+		I2C_ClearBusyFlagErratum(&hi2c1, 100);
+	}
+	return rc;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
