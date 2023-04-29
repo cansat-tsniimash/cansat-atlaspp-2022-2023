@@ -81,14 +81,6 @@ int app_main(){
 
 	its_i2c_link_start();
 
-
-
-	bus_t bus;
-	bus.GPIOx = GPIOB;
-	bus.GPIO_Pin = GPIO_PIN_0;
-	bus.hspi = &hspi1;
-
-
  //variables
 	uint64_t tx_adrr = 0xafafafaf01;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
@@ -104,7 +96,6 @@ int app_main(){
 	shift_reg.oe_pin = GPIO_PIN_1;
 	shift_reg_init(&shift_reg);
 	shift_reg_write_8(&shift_reg, 0x70);
-	HAL_Delay(10);
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
@@ -132,16 +123,35 @@ int app_main(){
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
 
+	bus_t bus_data;
+	mx25l512_spi_pins_sr_t mx25_data_pins;
+	mx25_data_pins.this = &shift_reg;
+	mx25_data_pins.pos_CS = 1;
+	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
+
+	bus_t bus_gps;
+	mx25l512_spi_pins_sr_t mx25_gps_pins;
+	mx25_gps_pins.this = &shift_reg;
+	mx25_gps_pins.pos_CS = 2;
+	mx25l512_spi_init_sr(&bus_gps, &hspi1, &mx25_gps_pins);
+
 	int nrf_irq;
 	uint32_t start_time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
 	nrf_pack_t nrf_pack;
 
+	uint8_t Data[3];
+
 	while(1){
-		shift_reg_write_bit_8(&shift_reg, 7, 1);
-		HAL_Delay(100);
-		shift_reg_write_bit_8(&shift_reg, 7, 0);
-		HAL_Delay(100);
+		mx25l512_rdid(&bus_data, Data);
+		HAL_Delay(10);
+
+		//shift_reg_write_bit_8(&shift_reg, 7, 1);
+		//HAL_Delay(100);
+		//shift_reg_write_bit_8(&shift_reg, 7, 0);
+		//HAL_Delay(100);
+		/*const char hello[] = "hello i'm a bus";
+		int rrc = its_i2c_link_write(hello, sizeof(hello));
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
@@ -218,7 +228,7 @@ int app_main(){
 
 
 
-		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
+		/*nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(&nrf_pack), false);
 				start_time_nrf = HAL_GetTick();
@@ -229,7 +239,7 @@ int app_main(){
 			nrf24_fifo_flush_tx(&nrf24);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(&nrf_pack), false);
 			start_time_nrf = HAL_GetTick();
-		}
+		}*/
 	}
 
 }

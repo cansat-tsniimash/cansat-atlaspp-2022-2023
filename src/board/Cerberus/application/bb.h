@@ -69,20 +69,79 @@ typedef enum i2c_link_cmd_t
     I2C_LINK_CMD_GET_PACKET = 0x02,
     I2C_LINK_CMD_SET_PACKET = 0x04,
 } its_i2c_link_cmd_t;
-
+//buzzer on/off
+//args: onoff: true/false
+//ret: hal error
 int bb_buzzer_control(bool onoff);
+//chip erraze
+//args:
+//ret: hal error
 int bb_chip_err();
+//gps erraze
+//args:
+//ret: hal error
+int bb_gps_err();
+//request to read data from Black boxes
+//args: size of data 1 byte
+// Continue? true/false
+//ret: hal error
 int bb_read_req(uint8_t size, bool is_continue);
-int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size);
+//read from black boxes
+//args:
+// buffer 1 byte
+// size of data 1 byte
+//ret: hal error
+int bb_read(uint8_t* buf, uint8_t size);
+//write to black boxes
+//args: buffer 1 byte
+// size of data 1 byte
+//ret: hal error
 int bb_write(uint8_t* buf, uint8_t size);
+//read request to black boxes with addres
+//args: addres 4 byte
+//size of data 1 byte
+//ret: hal error
 int bb_read_req_addr(uint32_t addr, uint8_t size);
+//read from black boxes with addres
+//args: addres 4 byte
+//buffer 1 byte
+//size of data 1 byte
+//ret: hal error
 int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size);
+//turn off the power
+//args:
+//ret: hal error
 int bb_off();
+//request to read gps
+//args: number of gps addres 2 bytes
+//ret: hal error
 int bb_read_gps_req(uint16_t num);
+//read gps
+//args: number of gps addres 2 bytes
+// buffer 1 byte
+// size of data 1 byte
+//ret: hal error
 int bb_read_gps(uint16_t *num, uint8_t* buf, uint8_t size);
+//write fly's bit
+//args: on/off true/false
+//ret: hal error
 int bb_write_flys_bit(bool onoff);
+//write fly's bit default
+//args: on/off true/false
+//ret: hal error
 int bb_write_flys_bit_d(bool onoff);
+//send data by radio
+//args: buffer 1 byte
+// size 1 byte
+//ret: hal error
 int bb_radio_send(uint8_t* buf, uint8_t size);
+//send data by radio default
+//args: buffer 1 byte
+// size 1 byte
+//ret: hal error
 int bb_radio_send_d(uint8_t* buf, uint8_t size);
+//radio settings pack
+//args: settings pack struct
+//ret: hal error
 int bb_settings_pack(settings_pack_t *settings_pack);
 #endif /* BB_H_ */
