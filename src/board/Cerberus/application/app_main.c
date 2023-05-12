@@ -19,9 +19,11 @@
 #include <nRF24L01_PL/nrf24_defs.h>
 #include <structs.h>
 #include <csv_file.h>
+#include <ATGM336H/nmea_gps.h>
 
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
+extern UART_HandleTypeDef huart6;
 //crc count
 uint16_t Crc16(uint8_t *buf, uint16_t len) {
 	uint16_t crc = 0xFFFF;
@@ -257,10 +259,14 @@ int app_main(){
 
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
-
+	int64_t cookie;
+	int fix_;
 	shift_reg_write_bit_16(&shift_reg_n, 10, false);
 	shift_reg_write_bit_16(&shift_reg_n, 11, false);
-
+	gps_init();
+	__HAL_UART_ENABLE_IT(&huart6, UART_IT_RXNE);
+	__HAL_UART_ENABLE_IT(&huart6, UART_IT_ERR);
+	uint64_t gps_time_s;
 
 							/*ТУТ ВАЙЛ*/
 
@@ -335,15 +341,14 @@ int app_main(){
 		{
 			pack1.bmp_temp = bme_data.temperature;
 		}
+		gps_work();
+		gps_get_coords(&cookie, &pack2.lat, &pack2.lon, &pack2.alt, &fix_);
+		gps_get_time(&cookie, &gps_time_s, &pack4.gps_time_us);
 		pack1.bmp_temp = bme_data.temperature*100;
 		pack1.bmp_press = pressure;
 		pack3.fhotorez = lux;
-		pack2.lat = 13;
-		pack2.lon = 14;
-		pack2.alt = 15;
-		pack2.fix = 16;
-		pack4.gps_time_s = 17;
-		pack4.gps_time_us = 18;
+		pack2.fix = fix_;
+		pack4.gps_time_s = gps_time_s;
 		HAL_Delay(100);
 		//каждые 750 мс берет температуру
 		if (HAL_GetTick()-start_time_ds >= 750)
