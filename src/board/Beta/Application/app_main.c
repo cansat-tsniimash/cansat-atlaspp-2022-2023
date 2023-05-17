@@ -15,9 +15,10 @@
 #include <nRF24L01_PL/nrf24_defs.h>
 #include "drivers_i2c/Inc/its-i2c-link.h"
 #include <MX25L512_/MX25L512.h>
+#include <ATGM336H/nmea_gps.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
-
+extern UART_HandleTypeDef huart2;
 
 uint8_t flag = 16;
 #pragma pack(push,1)
@@ -77,23 +78,12 @@ typedef struct
 
 
 
+
 int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
 
 	its_i2c_link_start();
-
-
-
-	bus_t bus;
-	bus.GPIOx = GPIOB;
-	bus.GPIO_Pin = GPIO_PIN_0;
-	bus.hspi = &hspi1;
-
-	bus_t bus_gps;
-	bus.GPIOx = GPIOB;
-	bus.GPIO_Pin = GPIO_PIN_1;
-	bus.hspi = &hspi1;
 
 //variables
 	uint64_t tx_adrr = 0xafafafaf01;
@@ -172,11 +162,18 @@ int app_main(){
 
 	uint8_t Data[3];
 	uint32_t addr;
+	int fix_;
+	int64_t cookie;
 
+	gps_init();
+	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
+	__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
 	while(1){
 		//mx25l512_rdid(&bus_data, Data);
 		HAL_Delay(10);
-
+		nrf_pack_t nrf_pack;
+		gps_work();
+		gps_get_coords(&cookie, &nrf_pack.lat, &nrf_pack.lon, &nrf_pack.alt, &fix_);
 		//shift_reg_write_bit_8(&shift_reg, 7, 1);
 		//HAL_Delay(100);
 		//shift_reg_write_bit_8(&shift_reg, 7, 0);
