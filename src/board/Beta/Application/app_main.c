@@ -24,32 +24,32 @@ uint8_t flag = 16;
 
 typedef enum
 {
-    CMD_BUZ = 0x31,
-    //управление пьезодинамиком
-    CMD_CE = 0x32,
-    //очистка памяти
-    CMD_Read = 0x33,
-    //чтение ПАМЯТИ
-    CMD_Write = 0x34,
-    //запись данных
-    CMD_ReadADDR = 0x35,
-    //Чтение по АДРЕСУ
-    CMD_Continue = 0x36,
-    //Продолжаю
-    CMD_CE_GPS = 0x37,
-    //выключить питание
-    CMD_OFF = 0x38,
-    //gps read
-    CMD_Read_gps = 0x39,
-    //запись бита полета ёмаё | write fly's bit
-    CMD_Write_flys_bit = 0x40,
-    //отправка по радио эсть жэ || radio send
-    CMD_Radio_send = 0x41,
-    //отправка по радио записоного сообщения
-    CMD_Radio_send_d = 0x42,
-    //настройка радио
-    CMD_Settings = 0x43
-} cmd_t;
+	    CMD_BUZ = 0x31,
+	    //управление пьезодинамиком
+	    CMD_CE = 0x32,
+	    //очистка памяти
+	    CMD_Read = 0x33,
+	    //чтение ПАМЯТИ
+	    CMD_Write = 0x34,
+	    //запись данных
+	    CMD_ReadADDR = 0x35,
+	    //Чтение по АДРЕСУ
+	    CMD_Continue = 0x36,
+	    //Продолжаю
+	    CMD_CE_GPS = 0x37,
+	    //выключить питание
+	    CMD_OFF = 0x38,
+	    //gps read
+	    CMD_Read_gps = 0x39,
+	    //запись бита полета ёмаё | write fly's bit
+	    CMD_Write_flys_bit = 0x40,
+	    //отправка по радио эсть жэ || radio send
+	    CMD_Radio_send = 0x41,
+	    //отправка по радио записаного сообщения
+	    CMD_Radio_send_d = 0x42,
+	    //настройка радио
+	    CMD_Settings = 0x43
+	}cmd_t;
 
 uint8_t buf[30];
 
@@ -83,7 +83,19 @@ int app_main(){
 
 	its_i2c_link_start();
 
- //variables
+
+
+	bus_t bus;
+	bus.GPIOx = GPIOB;
+	bus.GPIO_Pin = GPIO_PIN_0;
+	bus.hspi = &hspi1;
+
+	bus_t bus_gps;
+	bus.GPIOx = GPIOB;
+	bus.GPIO_Pin = GPIO_PIN_1;
+	bus.hspi = &hspi1;
+
+//variables
 	uint64_t tx_adrr = 0xafafafaf01;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
 	uint8_t packet[32] = {1, 2, 3};
@@ -211,7 +223,7 @@ int app_main(){
 					}
 					break;
 				case CMD_Read:
-					if (pack.size == 1 && pack.data[0] <= 32)//fixme
+					if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						addr = 0x0000;
 						uint8_t size = pack.data[0];
@@ -235,10 +247,41 @@ int app_main(){
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
 				case CMD_OFF:
+					if (pack.size = 0)
+					{
+						shift_reg_write_bit_8(&shift_reg, 6, 0);
+					}
+				case CMD_Read_gps:
 					if (pack.size = 2)
 					{
-						shift_reg_write_bit_8(&shift_reg, 7, 0);
+
+						uint8_t num = pack.num;
+						uint32_t addr = (num % 9* 28) << 4 | (num / 9) << 12;
+
+						mx25l512_read(&bus, addr, pack.data, 28);
 					}
+				case CMD_Write_flys_bit:
+					if (pack.size = 1)
+					{
+
+					}
+
+				case CMD_Radio_send:
+					if (pack.size <= 32)
+					{
+						nrf24_fifo_write(&nrf24, &pack.data, sizeof(&pack.data), false);
+					}
+				case  CMD_Radio_send_d:
+					if(pack.size <= 32)
+					{
+						memcpy(buf, i2c_pack.data, i2c_pack.size);
+					}
+				case CMD_Settings:
+					if(pack.size = 18)
+					{
+
+					}
+
 				}
 			}*/
 
