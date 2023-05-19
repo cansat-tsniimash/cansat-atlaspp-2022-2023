@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f0xx_it.h"
+#include <ATGM336H/nmea_gps.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -41,7 +42,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -175,7 +175,23 @@ void I2C1_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
+	{
+	  /* USER CODE BEGIN USART6_IRQn 0 */
+	    //__disable_irq();
+	//#pragma GCC diagnostic push;
+	//#pragma GCC diagnostic ignored "-Wunused-variable"
+	    volatile uint32_t sr = huart2.Instance->ISR;
+	//#pragma GCC diagnostic pop
+	    volatile uint32_t byte = huart2.Instance->RDR;
+	    //__enable_irq();
 
+	    gps_push_byte(byte);
+	    (void)sr;
+	  /* USER CODE END USART6_IRQn 0 */
+	  /* USER CODE BEGIN USART6_IRQn 1 */
+
+	  /* USER CODE END USART6_IRQn 1 */
+	}
   /* USER CODE END USART2_IRQn 0 */
   /* USER CODE BEGIN USART2_IRQn 1 */
 

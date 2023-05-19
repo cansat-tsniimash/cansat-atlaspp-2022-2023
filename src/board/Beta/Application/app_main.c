@@ -9,12 +9,12 @@
 
 #include "main.h"
 
-#include <nRF24L01_PL/nrf24_lower_api_stm32.h>
+/*#include <nRF24L01_PL/nrf24_lower_api_stm32.h>
 #include <nRF24L01_PL/nrf24_upper_api.h>
 #include <nRF24L01_PL/nrf24_lower_api.h>
 #include <nRF24L01_PL/nrf24_defs.h>
-#include "drivers_i2c/Inc/its-i2c-link.h"
-#include <MX25L512_/MX25L512.h>
+#include "drivers_i2c/Inc/its-i2c-link.h"*/
+//#include <MX25L512_/MX25L512.h>
 #include <ATGM336H/nmea_gps.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
@@ -86,7 +86,7 @@ int app_main(){
 	its_i2c_link_start();
 
 //variables
-	uint64_t tx_adrr = 0xafafafaf01;
+	/*uint64_t tx_adrr = 0xafafafaf01;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
 	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
@@ -141,9 +141,9 @@ int app_main(){
 	nrf24_pipe_rx_start(&nrf24, 0, &pipe_config);
 
 	nrf24_mode_standby(&nrf24);
-	nrf24_mode_tx(&nrf24);
+	nrf24_mode_tx(&nrf24);*/
 
-	bus_t bus_data;
+	/*bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
 	mx25_data_pins.this = &shift_reg;
 	mx25_data_pins.pos_CS = 1;
@@ -158,7 +158,7 @@ int app_main(){
 	int nrf_irq;
 	uint32_t start_time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
-	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};*/
 
 	uint8_t Data[3];
 	uint32_t addr;
@@ -170,7 +170,7 @@ int app_main(){
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
 	while(1){
 		//mx25l512_rdid(&bus_data, Data);
-		HAL_Delay(10);
+		//HAL_Delay(10);
 		nrf_pack_t nrf_pack;
 		gps_work();
 		gps_get_coords(&cookie, &nrf_pack.lat, &nrf_pack.lon, &nrf_pack.alt, &fix_);
@@ -286,7 +286,7 @@ int app_main(){
 
 
 
-		int comp;
+		/*int comp;
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
@@ -300,7 +300,7 @@ int app_main(){
 			start_time_nrf = HAL_GetTick();
 		}
 		nrf24_irq_get(&nrf24, &comp);
-		nrf24_irq_clear(&nrf24, comp);
+		nrf24_irq_clear(&nrf24, comp);*/
 	}
 
 }
