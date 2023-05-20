@@ -17,7 +17,6 @@
 #include <MX25L512_/MX25L512.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
-extern UART_HandleTypeDef huart2;
 
 uint8_t flag = 16;
 #pragma pack(push,1)
@@ -160,19 +159,11 @@ int app_main(){
 	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
 	while(1){
-		mx25l512_rdid(&bus_data, Data);
-		HAL_Delay(10);
-		shift_reg_write_bit_8(&shift_reg, 7, 1);
-		HAL_Delay(100);
-		shift_reg_write_bit_8(&shift_reg, 7, 0);
-		HAL_Delay(100);
-		const char hello[] = "hello i'm a bus";
-		int rrc = its_i2c_link_write(hello, sizeof(hello));
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
 		{
-			switch(pack.num){
+			/*switch(pack.num){
 				case CMD_BUZ:
 					if (pack.size == 1)
 					{
@@ -267,8 +258,8 @@ int app_main(){
 
 					}
 
-				}
-			}*/
+				}*/
+			}
 
 
 
