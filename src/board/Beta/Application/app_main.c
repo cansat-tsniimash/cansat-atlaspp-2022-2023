@@ -9,12 +9,12 @@
 
 #include "main.h"
 
-/*#include <nRF24L01_PL/nrf24_lower_api_stm32.h>
+#include <nRF24L01_PL/nrf24_lower_api_stm32.h>
 #include <nRF24L01_PL/nrf24_upper_api.h>
 #include <nRF24L01_PL/nrf24_lower_api.h>
 #include <nRF24L01_PL/nrf24_defs.h>
-#include "drivers_i2c/Inc/its-i2c-link.h"*/
-//#include <MX25L512_/MX25L512.h>
+#include "drivers_i2c/Inc/its-i2c-link.h"
+#include <MX25L512_/MX25L512.h>
 #include <ATGM336H/nmea_gps.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
@@ -86,7 +86,7 @@ int app_main(){
 	its_i2c_link_start();
 
 //variables
-	/*uint64_t tx_adrr = 0xafafafaf01;
+	uint64_t tx_adrr = 0x123456789a;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
 	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
@@ -123,27 +123,27 @@ int app_main(){
 	nrf_protocol_config.auto_retransmit_count = 0;
 	nrf_protocol_config.auto_retransmit_delay = 0;
 	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, 0xafafafafaf);
+	nrf24_pipe_set_tx_addr(&nrf24, 0x123456789a);
 
 	nrf24_pipe_config_t pipe_config;
 	for (int i = 1; i < 6; i++)
 	{
-		pipe_config.address = 0xcfcfcfcfcf;
+		pipe_config.address = 0x123456789a;
 		pipe_config.address = (pipe_config.address & ~((uint64_t)0xff << 32)) | ((uint64_t)(i + 7) << 32);
 		pipe_config.enable_auto_ack = false;
 		pipe_config.payload_size = -1;
 		nrf24_pipe_rx_start(&nrf24, i, &pipe_config);
 	}
 
-	pipe_config.address = 0xafafafaf01;
+	pipe_config.address = 0x123456789a;
 	pipe_config.enable_auto_ack = false;
 	pipe_config.payload_size = -1;
 	nrf24_pipe_rx_start(&nrf24, 0, &pipe_config);
 
 	nrf24_mode_standby(&nrf24);
-	nrf24_mode_tx(&nrf24);*/
+	nrf24_mode_tx(&nrf24);
 
-	/*bus_t bus_data;
+	bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
 	mx25_data_pins.this = &shift_reg;
 	mx25_data_pins.pos_CS = 1;
@@ -158,12 +158,17 @@ int app_main(){
 	int nrf_irq;
 	uint32_t start_time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
-	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};*/
+	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
 	uint8_t Data[3];
 	uint32_t addr;
 	int fix_;
 	int64_t cookie;
+	uint64_t time_s_;
+	uint32_t time_us_;
+	float lat;
+	float lon;
+	float alt;
 
 	gps_init();
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
@@ -173,7 +178,13 @@ int app_main(){
 		//HAL_Delay(10);
 		nrf_pack_t nrf_pack;
 		gps_work();
-		gps_get_coords(&cookie, &nrf_pack.lat, &nrf_pack.lon, &nrf_pack.alt, &fix_);
+		nrf_pack.lat = lat;
+		nrf_pack.lon = lon;
+		nrf_pack.alt = alt;
+		gps_get_coords(&cookie, &lat, &lon, &alt, &fix_);
+
+		gps_get_time(&cookie, &time_s_, &time_us_);
+		HAL_Delay(1);
 		//shift_reg_write_bit_8(&shift_reg, 7, 1);
 		//HAL_Delay(100);
 		//shift_reg_write_bit_8(&shift_reg, 7, 0);
@@ -286,7 +297,7 @@ int app_main(){
 
 
 
-		/*int comp;
+		int comp;
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
@@ -300,7 +311,7 @@ int app_main(){
 			start_time_nrf = HAL_GetTick();
 		}
 		nrf24_irq_get(&nrf24, &comp);
-		nrf24_irq_clear(&nrf24, comp);*/
+		nrf24_irq_clear(&nrf24, comp);
 	}
 
 }
