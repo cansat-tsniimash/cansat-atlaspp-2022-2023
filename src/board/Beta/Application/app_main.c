@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "main.h"
 
@@ -74,6 +75,23 @@ typedef struct
 	int8_t fix;
 	uint16_t crc;
 } nrf_pack_t;
+
+typedef struct
+{
+	nrf24_data_rate_t data_rate;
+	nrf24_tx_power_t tx_power;
+	uint8_t rf_channel;
+	nrf24_crc_size_t crc_size;
+	nrf24_address_width_t address_width;
+	bool en_dyn_payload_size;
+	bool en_ack_payload;
+	bool en_dyn_ack;
+	uint64_t tx_channel;
+	//мб удалить
+	uint8_t auto_retransmit_cout;
+	uint8_t auto_retransmit_delay;
+}settings_pack_t;
+
 #pragma pack(pop)
 
 
@@ -123,7 +141,7 @@ int app_main(){
 	nrf_protocol_config.auto_retransmit_count = 0;
 	nrf_protocol_config.auto_retransmit_delay = 0;
 	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, 0x123456789a);
+	nrf24_pipe_set_tx_addr(&nrf24, 0xE7E7E7E7E7);
 
 	nrf24_pipe_config_t pipe_config;
 	for (int i = 1; i < 6; i++)
@@ -173,6 +191,8 @@ int app_main(){
 	gps_init();
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
+
+	settings_pack_t settings_pack;
 	while(1){
 		//mx25l512_rdid(&bus_data, Data);
 		//HAL_Delay(10);
@@ -192,7 +212,7 @@ int app_main(){
 		//const char hello[] = "hello i'm a bus";
 		//int rrc = its_i2c_link_write(hello, sizeof(hello));
 
-		/*int rc = its_i2c_link_read(&pack, sizeof(pack));
+		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
 		{
 			switch(pack.num){
@@ -255,21 +275,20 @@ int app_main(){
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
 				case CMD_OFF:
-					if (pack.size = 0)
+					if (pack.size == 0)
 					{
 						shift_reg_write_bit_8(&shift_reg, 6, 0);
 					}
 				case CMD_Read_gps:
-					if (pack.size = 2)
+					if (pack.size == 2)
 					{
 
 						uint8_t num = pack.num;
 						uint32_t addr = (num % 9* 28) << 4 | (num / 9) << 12;
-
-						mx25l512_read(&bus, addr, pack.data, 28);
+						mx25l512_read(&bus_data, &addr, pack.data, 28);
 					}
 				case CMD_Write_flys_bit:
-					if (pack.size = 1)
+					if (pack.size == 1)
 					{
 
 					}
@@ -277,21 +296,48 @@ int app_main(){
 				case CMD_Radio_send:
 					if (pack.size <= 32)
 					{
-						nrf24_fifo_write(&nrf24, &pack.data, sizeof(&pack.data), false);
+						nrf24_fifo_write(&nrf24, pack.data, pack.size, false);
 					}
 				case  CMD_Radio_send_d:
-					if(pack.size <= 32)
+					if(pack.size > 0 && pack.size <= 32)
 					{
-						memcpy(buf, i2c_pack.data, i2c_pack.size);
+						memcpy(buf, pack.data, pack.size);
+
+					}
+
+					if(pack.size == 0)
+					{
+						nrf24_fifo_write(&nrf24, buf, sizeof(buf), false);
 					}
 				case CMD_Settings:
-					if(pack.size = 18)
+					if(pack.size == 18)
 					{
+						memcpy(&settings_pack, pack.data, pack.size);
+						nrf_config.data_rate = settings_pack.data_rate;
+						nrf_config.tx_power = settings_pack.tx_power;
+						nrf_config.rf_channel = settings_pack.rf_channel;
+						nrf24_setup_rf(&nrf24, &nrf_config);
+						nrf_protocol_config.address_width = settings_pack.address_width;
+						nrf_protocol_config.crc_size = settings_pack.crc_size;
+						nrf_protocol_config.en_dyn_payload_size = settings_pack.en_dyn_payload_size;
+						nrf_protocol_config.en_ack_payload = settings_pack.en_ack_payload;
+						nrf_protocol_config.en_dyn_ack = settings_pack.en_dyn_ack;
+						nrf24_pipe_set_tx_addr(&nrf24, settings_pack.tx_channel);
+						nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
+
+
+						nrf_protocol_config.auto_retransmit_count = settings_pack.auto_retransmit_cout;
+						nrf_protocol_config.auto_retransmit_delay = settings_pack.auto_retransmit_delay;
+
+
+
+
+
 
 					}
 
 				}
-			}*/
+			}
 
 
 
