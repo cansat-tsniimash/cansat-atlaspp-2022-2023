@@ -188,11 +188,12 @@ int app_main(){
 	float lon;
 	float alt;
 
-	gps_init();
-	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
-	__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
+	//gps_init();
+	//__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
+	//__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
 
 	settings_pack_t settings_pack;
+	uint8_t byte;
 	while(1){
 		//mx25l512_rdid(&bus_data, Data);
 		//HAL_Delay(10);
@@ -246,8 +247,8 @@ int app_main(){
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						//uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						//mx25l512_PP(&bus_data, &addr, pack.data + 4, pack.size - 4);//Записываю данные
+						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						mx25l512_PP(&bus_data, &addr, pack.data + 4, pack.size - 4);//Записываю данные
 					}
 					break;
 				case CMD_Read:
@@ -322,17 +323,11 @@ int app_main(){
 						nrf_protocol_config.en_dyn_payload_size = settings_pack.en_dyn_payload_size;
 						nrf_protocol_config.en_ack_payload = settings_pack.en_ack_payload;
 						nrf_protocol_config.en_dyn_ack = settings_pack.en_dyn_ack;
-						nrf24_pipe_set_tx_addr(&nrf24, settings_pack.tx_channel);
-						nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-
 
 						nrf_protocol_config.auto_retransmit_count = settings_pack.auto_retransmit_cout;
 						nrf_protocol_config.auto_retransmit_delay = settings_pack.auto_retransmit_delay;
-
-
-
-
-
+						nrf24_pipe_set_tx_addr(&nrf24, settings_pack.tx_channel);
+						nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
 
 					}
 
