@@ -52,6 +52,19 @@ typedef struct{
 	uint32_t gps_time_us;
 	uint16_t crc;
 }pack4_t;
+typedef struct
+{
+	uint8_t flag;
+	uint16_t num;
+	uint16_t time_s;
+	float lat;
+	float lon;
+	float alt;
+	uint32_t gps_time_s;
+	uint32_t gps_time_us;
+	int8_t fix;
+	uint16_t crc;
+} nrf_pack_t;
 #pragma pack(pop)
 
 #endif /* STRUCTS_H_ */

@@ -70,78 +70,74 @@ typedef enum i2c_link_cmd_t
     I2C_LINK_CMD_SET_PACKET = 0x04,
 } its_i2c_link_cmd_t;
 //buzzer on/off
-//args: onoff: true/false
+//args: i2c address, onoff: true/false
 //ret: hal error
-int bb_buzzer_control(bool onoff);
+int bb_buzzer_control(uint16_t I2C_ADDRES, bool onoff);
 //chip erraze
-//args:
+//args: i2c address
 //ret: hal error
-int bb_chip_err();
+int bb_chip_err(uint16_t I2C_ADDRES);
 //gps erraze
-//args:
+//args: i2c address
 //ret: hal error
-int bb_gps_err();
+int bb_gps_err(uint16_t I2C_ADDRES);
 //request to read data from Black boxes
-//args: size of data 1 byte
+//args: i2c address, size of data 1 byte
 // Continue? true/false
 //ret: hal error
-int bb_read_req(uint8_t size, bool is_continue);
+int bb_read_req(uint16_t I2C_ADDRES, uint8_t size, bool is_continue);
 //read from black boxes
-//args:
+//args: i2c address
 // buffer 1 byte
 // size of data 1 byte
 //ret: hal error
-int bb_read(uint8_t* buf, uint8_t size);
+int bb_read(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size);
 //write to black boxes
-//args: buffer 1 byte
+//args: i2c address, buffer 1 byte
 // size of data 1 byte
 //ret: hal error
-int bb_write(uint8_t* buf, uint8_t size);
+int bb_write(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size);
 //read request to black boxes with addres
-//args: addres 4 byte
+//args: i2c address, addres 4 byte
 //size of data 1 byte
 //ret: hal error
-int bb_read_req_addr(uint32_t addr, uint8_t size);
+int bb_read_req_addr(uint16_t I2C_ADDRES, uint32_t addr, uint8_t size);
 //read from black boxes with addres
-//args: addres 4 byte
+//args: i2c address, addres 4 byte
 //buffer 1 byte
 //size of data 1 byte
 //ret: hal error
-int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size);
+int bb_read_addr(uint16_t I2C_ADDRES, uint32_t *addr, uint8_t* buf, uint8_t size);
 //turn off the power
-//args:
+//args: i2c address
 //ret: hal error
-int bb_off();
+int bb_off(uint16_t I2C_ADDRES);
 //request to read gps
-//args: number of gps addres 2 bytes
+//args: i2c address, number of gps addres 2 bytes
 //ret: hal error
-int bb_read_gps_req(uint16_t num);
+int bb_read_gps_req(uint16_t I2C_ADDRES, uint16_t num);
 //read gps
-//args: number of gps addres 2 bytes
+//args: i2c address, number of gps addres 2 bytes
 // buffer 1 byte
 // size of data 1 byte
 //ret: hal error
-int bb_read_gps(uint16_t *num, uint8_t* buf, uint8_t size);
+int bb_read_gps(uint16_t I2C_ADDRES, uint16_t *num, uint8_t* buf, uint8_t size);
 //write fly's bit
-//args: on/off true/false
+//args: i2c address, on/off true/false
 //ret: hal error
-int bb_write_flys_bit(bool onoff);
-//write fly's bit default
-//args: on/off true/false
-//ret: hal error
-int bb_write_flys_bit_d(bool onoff);
+int bb_write_flys_bit(uint16_t I2C_ADDRES, bool onoff);
 //send data by radio
-//args: buffer 1 byte
+//args: i2c address, buffer 1 byte
 // size 1 byte
 //ret: hal error
-int bb_radio_send(uint8_t* buf, uint8_t size);
+int bb_radio_send(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size);
 //send data by radio default
-//args: buffer 1 byte
+//args: i2c address, buffer 1 byte
 // size 1 byte
 //ret: hal error
-int bb_radio_send_d(uint8_t* buf, uint8_t size);
+int bb_radio_send_d(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size);
 //radio settings pack
-//args: settings pack struct
+//args: i2c address, settings pack struct
 //ret: hal error
-int bb_settings_pack(settings_pack_t *settings_pack);
+int bb_settings_pack(uint16_t I2C_ADDRES, settings_pack_t *settings_pack);
 #endif /* BB_H_ */

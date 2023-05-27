@@ -24,9 +24,8 @@ typedef struct
 extern I2C_HandleTypeDef hi2c1;
 
 #define I2C_TIMEOUT 10
-#define I2C_ADDRES (0x77 << 1)
 
-int bb_buzzer_control(bool onoff)
+int bb_buzzer_control(uint16_t I2C_ADDRES, bool onoff)
 {
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
@@ -50,7 +49,7 @@ int bb_buzzer_control(bool onoff)
 	return rc;
 }
 
-int bb_chip_err()
+int bb_chip_err(uint16_t I2C_ADDRES)
 {
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
@@ -73,7 +72,7 @@ int bb_chip_err()
 	return rc;
 }
 
-int bb_gps_err()
+int bb_gps_err(uint16_t I2C_ADDRES)
 {
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
@@ -95,7 +94,7 @@ int bb_gps_err()
 	}
 	return rc;
 }
-int bb_read_req_addr(uint32_t addr, uint8_t size){
+int bb_read_req_addr(uint16_t I2C_ADDRES, uint32_t addr, uint8_t size){
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_ReadADDR;
@@ -126,7 +125,7 @@ int bb_read_req_addr(uint32_t addr, uint8_t size){
 	return rc;
 }
 
-int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size)
+int bb_read_addr(uint16_t I2C_ADDRES, uint32_t *addr, uint8_t* buf, uint8_t size)
 {
  	uint16_t size_mes = 0;
 	i2c_pack_t i2c_pack;
@@ -172,15 +171,15 @@ int bb_read_addr(uint32_t *addr, uint8_t* buf, uint8_t size)
 	{
 	 	return rc;
 	}
-	memcpy(addr, &i2c_pack.data, 4);
-	if(i2c_pack.size - 5 < size)
-		memcpy(buf, &i2c_pack.data + 5, i2c_pack.size);
-	if(i2c_pack.size - 5 > size)
-		memcpy(buf, &i2c_pack.data + 5, size);
+	memcpy(addr, i2c_pack.data, 4);
+	if(i2c_pack.size - 4 <= size)
+		memcpy(buf, i2c_pack.data + 4, i2c_pack.size - 4);
+	if(i2c_pack.size - 4 > size)
+		memcpy(buf, i2c_pack.data + 4, size);
 	return rc;
 }
 
-int bb_read_req(uint8_t size, bool is_continue){
+int bb_read_req(uint16_t I2C_ADDRES, uint8_t size, bool is_continue){
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	if(!is_continue)
@@ -213,7 +212,7 @@ int bb_read_req(uint8_t size, bool is_continue){
 	return rc;
 }
 
-int bb_read(uint8_t* buf, uint8_t size)
+int bb_read(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size)
 {
  	uint16_t size_mes = 0;
 	i2c_pack_t i2c_pack;
@@ -259,11 +258,15 @@ int bb_read(uint8_t* buf, uint8_t size)
 	{
 	 	return rc;
 	}
+	if(i2c_pack.size <= size)
+		memcpy(buf, i2c_pack.data, i2c_pack.size);
+	if(i2c_pack.size > size)
+		memcpy(buf, i2c_pack.data, size);
 	return rc;
 }
 
 
-int bb_write(uint8_t* buf, uint8_t size)
+int bb_write(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size)
 {
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
@@ -291,7 +294,7 @@ int bb_write(uint8_t* buf, uint8_t size)
 	}
 	return rc;
 }
-int bb_off(){
+int bb_off(uint16_t I2C_ADDRES){
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_OFF;
@@ -313,7 +316,7 @@ int bb_off(){
 	return rc;
 }
 
-int bb_read_gps_req(uint16_t num){
+int bb_read_gps_req(uint16_t I2C_ADDRES, uint16_t num){
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_Read_gps;
@@ -340,7 +343,7 @@ int bb_read_gps_req(uint16_t num){
 	return rc;
 }
 
-int bb_read_gps(uint16_t *num, uint8_t* buf, uint8_t size)
+int bb_read_gps(uint16_t I2C_ADDRES, uint16_t *num, uint8_t* buf, uint8_t size)
 {
  	uint16_t size_mes = 0;
 	i2c_pack_t i2c_pack;
@@ -386,15 +389,15 @@ int bb_read_gps(uint16_t *num, uint8_t* buf, uint8_t size)
 	{
 	 	return rc;
 	}
-	memcpy(num, &i2c_pack.data, 2);
-	if(i2c_pack.size - 2 < size)
-		memcpy(buf, &i2c_pack.data + 2, i2c_pack.size);
+	memcpy(num, i2c_pack.data, 2);
+	if(i2c_pack.size - 2 <= size)
+		memcpy(buf, i2c_pack.data + 2, i2c_pack.size);
 	if(i2c_pack.size - 2 > size)
-		memcpy(buf, &i2c_pack.data + 2, size);
+		memcpy(buf, i2c_pack.data + 2, size);
 	return rc;
 }
 
-int bb_write_flys_bit(bool onoff)
+int bb_write_flys_bit(uint16_t I2C_ADDRES, bool onoff)
 {
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
@@ -418,7 +421,7 @@ int bb_write_flys_bit(bool onoff)
 	return rc;
 }
 
-int bb_radio_send(uint8_t* buf, uint8_t size){
+int bb_radio_send(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size){
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_Radio_send;
@@ -446,7 +449,7 @@ int bb_radio_send(uint8_t* buf, uint8_t size){
 	return rc;
 }
 
-int bb_radio_send_d(uint8_t* buf, uint8_t size){
+int bb_radio_send_d(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size){
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_Radio_send_d;
@@ -474,7 +477,7 @@ int bb_radio_send_d(uint8_t* buf, uint8_t size){
 	return rc;
 }
 
-int bb_settings_pack(settings_pack_t *settings_pack)
+int bb_settings_pack(uint16_t I2C_ADDRES, settings_pack_t *settings_pack)
 {
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;

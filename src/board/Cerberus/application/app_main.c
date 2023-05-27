@@ -20,6 +20,11 @@
 #include <structs.h>
 #include <csv_file.h>
 #include <ATGM336H/nmea_gps.h>
+#include <bb.h>
+
+#define alpha_addr 0x76 << 1
+#define beta_addr 0x77 << 1
+#define gamma_addr 0x78 << 1
 
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
@@ -65,7 +70,6 @@ int app_main(){
 	FRESULT res4 = 255;
 	FRESULT res_bin = 255;
 	FRESULT megares = 255;
-	FRESULT superres = 255;
 	const char path1[] = "packet1.csv";
 	const char path2[] = "packet2.csv";
 	const char path3[] = "packet3.csv";
@@ -275,6 +279,22 @@ int app_main(){
 
 	uint16_t str_wr;
 	char str_buf[300];
+	uint8_t buf[40] = {1, 2, 3};
+	uint32_t addr = 10;
+	uint16_t num = 1;
+	nrf_pack_t gps_pack;
+	settings_pack_t settings_pack;
+	settings_pack.data_rate = NRF24_DATARATE_250_KBIT;
+	settings_pack.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
+	settings_pack.rf_channel = 112;
+	settings_pack.crc_size = NRF24_CRCSIZE_1BYTE;
+	settings_pack.address_width = NRF24_ADDRES_WIDTH_5_BYTES;
+	settings_pack.en_dyn_payload_size = true;
+	settings_pack.en_ack_payload = true;
+	settings_pack.en_dyn_ack = true;
+	settings_pack.tx_chanel = 0x123456789a;
+	settings_pack.auto_retransmit_count = 0;
+	settings_pack.auto_retransmit_delay = 0;
 	while(1){
 		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
@@ -284,7 +304,26 @@ int app_main(){
 		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);
 		lisread(&ctx_lis, &temperature_celsius_mag, &mag);
 
+		////bb_chip_err(beta_addr);
+		////bb_gps_err(beta_addr);
+		////bb_read_req(beta_addr, 32, false);
+		HAL_Delay(1);
+		////bb_read(beta_addr, buf, 32);
+		////bb_read_req(beta_addr, 32, true);
+		HAL_Delay(1);
+		////bb_read(beta_addr, buf, 32);
+		bb_write(beta_addr, buf, sizeof(buf));
+		////bb_read_req_addr(beta_addr, 0, 32);
 
+		////bb_read_addr(beta_addr, &addr, buf, 32);
+		////bb_off(beta_addr);
+		////bb_read_gps_req(beta_addr, 1);
+		////bb_read_gps(beta_addr, &num, (uint8_t *)&gps_pack, sizeof(gps_pack));
+		////bb_write_flys_bit(beta_addr, true);
+	    bb_radio_send(beta_addr, buf, sizeof(buf));
+		//bb_radio_send_d(beta_addr, buf, sizeof(buf));
+		bb_radio_send_d(beta_addr, buf, 0);
+		////bb_settings_pack(beta_addr, &settings_pack);
 		if(is_mount == FR_OK){
 			mount = true;
 		}
@@ -517,7 +556,7 @@ int app_main(){
 			}
 			if(megares != FR_OK || is_mount != FR_OK){
 				shift_reg_write_bit_16(&shift_reg_n, 9, false);
-				superres = f_mount(0, "0", 1);
+				f_mount(0, "0", 1);
 				extern Disk_drvTypeDef disk;
 				disk.is_initialized[0] = 0;
 				is_mount = f_mount(&fileSystem, "", 1);
