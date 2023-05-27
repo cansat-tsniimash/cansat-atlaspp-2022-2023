@@ -187,6 +187,7 @@ int app_main(){
 	float lat;
 	float lon;
 	float alt;
+	//cmd_pack_t pack;
 
 	//gps_init();
 	//__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
@@ -212,6 +213,9 @@ int app_main(){
 		//HAL_Delay(100);
 		//const char hello[] = "hello i'm a bus";
 		//int rrc = its_i2c_link_write(hello, sizeof(hello));
+
+		uint32_t addr_write = 0;
+		uint32_t addr_read = 0;
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
@@ -239,66 +243,75 @@ int app_main(){
 					{
 						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
 						uint8_t size = pack.data[4];
-						mx25l512_read(&bus_data, &addr, pack.data, size);//читаю данные
-						pack.size = size;
+						mx25l512_read(&bus_data, &addr, pack.data + 4, size);//читаю данные
+						pack.size = size + 4;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						mx25l512_PP(&bus_data, &addr, pack.data + 4, pack.size - 4);//Записываю данные
+						addr_write = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						mx25l512_PP(&bus_data, &addr_write, pack.data + 4, pack.size - 4);//Записываю данные
 					}
 					break;
 				case CMD_Read:
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
-						addr = 0x0000;
+						addr_read = 0x0000;
 						uint8_t size = pack.data[0];
-						mx25l512_read(&bus_data, &addr, pack.data, size);
-						addr = size << 4;
+						mx25l512_read(&bus_data, &addr_read, pack.data, size);
+						addr_read = size << 4;
+						pack.size = size;
 						its_i2c_link_write(&pack, sizeof(pack));
 
 					}
+					break;
 				case CMD_Continue:
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						uint8_t size = pack.data[0];
-						uint8_t new_addr = addr + (size << 4);
-						if (addr && (0x0f << 12) != new_addr && (0x0f << 12))
+						uint32_t new_addr = addr + (size << 4);
+						if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
 						{
-							addr = new_addr && (0x0f << 12);
-							new_addr = addr + (sizeof(pack) << 4);
+							addr_read = new_addr & (0x0f << 12);
+							new_addr = addr_read + (sizeof(pack) << 4);
 						}
-						mx25l512_read(&bus_data, &addr, pack.data, size);
-						addr = new_addr;
+						mx25l512_read(&bus_data, &addr_read, pack.data, size);
+						addr_read = new_addr;
+						pack.size = size;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
+					break;
 				case CMD_OFF:
 					if (pack.size == 0)
 					{
 						shift_reg_write_bit_8(&shift_reg, 6, 0);
 					}
+					break;
 				case CMD_Read_gps:
 					if (pack.size == 2)
 					{
-
-						uint8_t num = pack.num;
+						uint16_t num = *((uint16_t *)pack.data);
 						uint32_t addr = (num % 9* 28) << 4 | (num / 9) << 12;
-						mx25l512_read(&bus_data, &addr, pack.data, 28);
+						mx25l512_read(&bus_data, &addr, pack.data + 2, 28);
+						pack.size = 28 + 2;
+						its_i2c_link_write(&pack, sizeof(pack));
 					}
+					break;
 				case CMD_Write_flys_bit:
 					if (pack.size == 1)
 					{
 
 					}
+					break;
 
 				case CMD_Radio_send:
 					if (pack.size <= 32)
 					{
 						nrf24_fifo_write(&nrf24, pack.data, pack.size, false);
 					}
+					break;
 				case  CMD_Radio_send_d:
 					if(pack.size > 0 && pack.size <= 32)
 					{
@@ -310,6 +323,7 @@ int app_main(){
 					{
 						nrf24_fifo_write(&nrf24, buf, sizeof(buf), false);
 					}
+					break;
 				case CMD_Settings:
 					if(pack.size == 18)
 					{
@@ -330,6 +344,7 @@ int app_main(){
 						nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
 
 					}
+					break;
 
 				}
 			}
