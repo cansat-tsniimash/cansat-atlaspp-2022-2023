@@ -74,8 +74,12 @@ typedef struct
 } nrf_pack_t;
 #pragma pack(pop)
 
-
-
+void off_bb(shift_reg_t *shift_reg){
+	shift_reg_write_bit_8(shift_reg, 3, true);
+}
+void buzzer_control(shift_reg_t *shift_reg, bool onoff){
+	shift_reg_write_bit_8(shift_reg, 7, onoff);
+}
 
 int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
@@ -144,14 +148,8 @@ int app_main(){
 	bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
 	mx25_data_pins.this = &shift_reg;
-	mx25_data_pins.pos_CS = 1;
+	mx25_data_pins.pos_CS = 6;
 	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
-
-	bus_t bus_gps;
-	mx25l512_spi_pins_sr_t mx25_gps_pins;
-	mx25_gps_pins.this = &shift_reg;
-	mx25_gps_pins.pos_CS = 2;
-	mx25l512_spi_init_sr(&bus_gps, &hspi1, &mx25_gps_pins);
 
 	int nrf_irq;
 	uint32_t start_time_nrf = HAL_GetTick();
@@ -167,10 +165,7 @@ int app_main(){
 				case CMD_BUZ:
 					if (pack.size == 1)
 					{
-						if (pack.data[0])
-							shift_reg_write_bit_8(&shift_reg, 7, 1);//Вкл
-						else
-							shift_reg_write_bit_8(&shift_reg, 7, 0);//Выкл
+						buzzer_control(&shift_reg, pack.data[0])
 					}
 					break;
 				case CMD_CE:
