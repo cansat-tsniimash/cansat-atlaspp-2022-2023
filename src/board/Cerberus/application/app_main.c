@@ -21,21 +21,20 @@
 #include <csv_file.h>
 #include <ATGM336H/nmea_gps.h>
 #include <bb.h>
-
+#include <string.h>
 #define alpha_addr 0x76 << 1
 #define beta_addr 0x77 << 1
 #define gamma_addr 0x78 << 1
-
+#define devider 10
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
 extern UART_HandleTypeDef huart6;
 //crc count
 uint16_t Crc16(uint8_t *buf, uint16_t len) {
 	uint16_t crc = 0xFFFF;
-	uint8_t i;
 	while (len--) {
 		crc ^= *buf++ << 8;
-		for (i = 0; i < 8; i++)
+		for (uint8_t i = 0; i < 8; i++)
 			crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
 	}
 	return crc;
@@ -295,7 +294,10 @@ int app_main(){
 	settings_pack.tx_chanel = 0x123456789a;
 	settings_pack.auto_retransmit_count = 0;
 	settings_pack.auto_retransmit_delay = 0;
+	uint16_t fast_count = 0;
+	char data[] = "Hello, World!";
 	while(1){
+		bb_radio_send_d(gamma_addr, (uint8_t *)data, sizeof(data));
 		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
 		double pressure = bme_data.pressure;
@@ -307,12 +309,12 @@ int app_main(){
 		////bb_chip_err(beta_addr);
 		////bb_gps_err(beta_addr);
 		////bb_read_req(beta_addr, 32, false);
-		HAL_Delay(1);
+		////HAL_Delay(1);
 		////bb_read(beta_addr, buf, 32);
 		////bb_read_req(beta_addr, 32, true);
-		HAL_Delay(1);
+		////HAL_Delay(1);
 		////bb_read(beta_addr, buf, 32);
-		bb_write(beta_addr, buf, sizeof(buf));
+		////bb_write(beta_addr, buf, sizeof(buf));
 		////bb_read_req_addr(beta_addr, 0, 32);
 
 		////bb_read_addr(beta_addr, &addr, buf, 32);
@@ -320,9 +322,9 @@ int app_main(){
 		////bb_read_gps_req(beta_addr, 1);
 		////bb_read_gps(beta_addr, &num, (uint8_t *)&gps_pack, sizeof(gps_pack));
 		////bb_write_flys_bit(beta_addr, true);
-	    bb_radio_send(beta_addr, buf, sizeof(buf));
+	    ////bb_radio_send(beta_addr, buf, sizeof(buf));
 		//bb_radio_send_d(beta_addr, buf, sizeof(buf));
-		bb_radio_send_d(beta_addr, buf, 0);
+		////bb_radio_send_d(beta_addr, buf, 0);
 		////bb_settings_pack(beta_addr, &settings_pack);
 		if(is_mount == FR_OK){
 			mount = true;
@@ -404,7 +406,6 @@ int app_main(){
 		{
 		case STATE_READY:
 			//Связь с ЧЯ
-
 			if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_BEFORE_ROCKET;
 				limit_lux = lux;
@@ -424,7 +425,12 @@ int app_main(){
 			break;
 		case STATE_IN_ROCKET:
 			//передача данных на черные ящики и проверка фоторезистора
-
+			bb_chip_err(alpha_addr);
+			bb_chip_err(beta_addr);
+			bb_chip_err(gamma_addr);
+			bb_gps_err(alpha_addr);
+			bb_gps_err(beta_addr);
+			bb_gps_err(gamma_addr);
 			if(lux >=  limit_lux){
 				state_now = STATE_AFTER_ROCKET;
 				shift_reg_write_bit_16(&shift_reg_n, 10, true);
@@ -433,7 +439,9 @@ int app_main(){
 			break;
 		case STATE_AFTER_ROCKET:
 			//запись данных на ЧЯ, передача данных на землю и запись данных на сд
-
+			bb_buzzer_control(alpha_addr, true);
+			bb_buzzer_control(beta_addr, true);
+			bb_buzzer_control(gamma_addr, true);
 			state_now = STATE_AFTER_ROCKET;
 			break;
 		}
@@ -449,6 +457,16 @@ int app_main(){
 			pack3.crc = Crc16((uint8_t *)&pack3, sizeof(pack3) - 2);// <<------pack
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack1, sizeof(pack1), false);//32
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
+			fast_count++;
+			if(fast_count >= 10){
+				bb_write(alpha_addr, (uint8_t *)&pack1, sizeof(pack1));
+				bb_write(alpha_addr, (uint8_t *)&pack3, sizeof(pack3));
+				bb_write(beta_addr, (uint8_t *)&pack1, sizeof(pack1));
+				bb_write(beta_addr, (uint8_t *)&pack3, sizeof(pack3));
+				bb_write(gamma_addr, (uint8_t *)&pack1, sizeof(pack1));
+				bb_write(gamma_addr, (uint8_t *)&pack3, sizeof(pack3));
+				fast_count = 0;
+			}
 			start_time_nrf = HAL_GetTick();
 
 			if(res1 == FR_OK){
@@ -505,8 +523,15 @@ int app_main(){
 			pack2.crc = Crc16((uint8_t *)&pack2, sizeof(pack2) - 2);
 			pack4.time_s = HAL_GetTick();
 			pack4.crc = Crc16((uint8_t *)&pack4, sizeof(pack4) - 2);
+			bb_write(alpha_addr, (uint8_t *)&pack2, sizeof(pack2));
+			bb_write(alpha_addr, (uint8_t *)&pack4, sizeof(pack4));
+			bb_write(beta_addr, (uint8_t *)&pack2, sizeof(pack2));
+			bb_write(beta_addr, (uint8_t *)&pack4, sizeof(pack4));
+			bb_write(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
+			bb_write(gamma_addr, (uint8_t *)&pack4, sizeof(pack4));
 			start_time_nrf = HAL_GetTick();
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack2, sizeof(pack2), false);
+			bb_radio_send(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
 
 			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал
