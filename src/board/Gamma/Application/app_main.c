@@ -6,7 +6,7 @@
  */
 
 #include <stdio.h>
-
+#include <string.h>
 #include "main.h"
 
 #include <nRF24L01_PL/nrf24_lower_api_stm32.h>
@@ -14,7 +14,7 @@
 #include <nRF24L01_PL/nrf24_lower_api.h>
 #include <nRF24L01_PL/nrf24_defs.h>
 #include "drivers_i2c/Inc/its-i2c-link.h"
-#include <MX25L512_/MX25L512.h>
+#include <MX25L512_/MX25L512_up.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
 
@@ -50,7 +50,7 @@ typedef enum
 	    CMD_Settings = 0x43
 	}cmd_t;
 
-uint8_t buf[30];
+uint8_t buf[32];
 
 typedef struct
 {
@@ -72,6 +72,21 @@ typedef struct
 	int8_t fix;
 	uint16_t crc;
 } nrf_pack_t;
+typedef struct
+{
+	nrf24_data_rate_t data_rate;
+	nrf24_tx_power_t tx_power;
+	uint8_t rf_channel;
+	nrf24_crc_size_t crc_size;
+	nrf24_address_width_t address_width;
+	bool en_dyn_payload_size;
+	bool en_ack_payload;
+	bool en_dyn_ack;
+	uint64_t tx_channel;
+	//мб удалить
+	uint8_t auto_retransmit_cout;
+	uint8_t auto_retransmit_delay;
+}settings_pack_t;
 #pragma pack(pop)
 
 void off_bb(shift_reg_t *shift_reg){
@@ -150,9 +165,13 @@ int app_main(){
 	mx25_data_pins.this = &shift_reg;
 	mx25_data_pins.pos_CS = 6;
 	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
-
+	uint32_t addr_write = 0;
+	uint32_t addr_read = 0;
 	int nrf_irq;
+	uint32_t addr = 0x00;
+	settings_pack_t settings_pack;
 	uint32_t start_time_nrf = HAL_GetTick();
+	uint32_t time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
 	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -161,116 +180,135 @@ int app_main(){
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
 		{
-			/*switch(pack.num){
+			switch(pack.num){
 				case CMD_BUZ:
 					if (pack.size == 1)
 					{
-						buzzer_control(&shift_reg, pack.data[0])
+						if (pack.data[0])
+							shift_reg_write_bit_8(&shift_reg, 7, 1);//Вкл
+						else
+							shift_reg_write_bit_8(&shift_reg, 7, 0);//Выкл
 					}
 					break;
 				case CMD_CE:
 					if (pack.size == 0)
-						mx25l512_CE(&bus_data);//Затираю чип целиком
-					break;
-				case CMD_CE_GPS:
-					if (pack.size == 0)
-						mx25l512_CE(&bus_gps);//Затираю чип целиком
+						mx25l512_CE_up(&bus_data, 10);//Затираю чип целиком
 					break;
 				case CMD_ReadADDR:
 					if ((pack.size = 5) && (pack.data[4] <= 32))
 					{
 						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
 						uint8_t size = pack.data[4];
-						mx25l512_read(&bus_data, &addr, pack.data, size);//читаю данные
-						pack.size = size;
+						mx25l512_read(&bus_data, &addr, pack.data + 4, size);//читаю данные
+						pack.size = size + 4;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						//uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						//mx25l512_PP(&bus_data, &addr, pack.data + 4, pack.size - 4);//Записываю данные
+						addr_write = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						mx25l512_PP_up(&bus_data, &addr_write, pack.data + 4, pack.size - 4, 10);//Записываю данные
 					}
 					break;
 				case CMD_Read:
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
-						addr = 0x0000;
+						addr_read = 0x0000;
 						uint8_t size = pack.data[0];
-						mx25l512_read(&bus_data, &addr, pack.data, size);
-						addr = size << 4;
+						mx25l512_read(&bus_data, &addr_read, pack.data, size);
+						addr_read = size << 4;
+						pack.size = size;
 						its_i2c_link_write(&pack, sizeof(pack));
 
 					}
+					break;
 				case CMD_Continue:
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						uint8_t size = pack.data[0];
-						uint8_t new_addr = addr + (size << 4);
-						if (addr && (0x0f << 12) != new_addr && (0x0f << 12))
+						uint32_t new_addr = addr + (size << 4);
+						if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
 						{
-							addr = new_addr && (0x0f << 12);
-							new_addr = addr + (sizeof(pack) << 4);
+							addr_read = new_addr & (0x0f << 12);
+							new_addr = addr_read + (sizeof(pack) << 4);
 						}
-						mx25l512_read(&bus_data, &addr, pack.data, size);
-						addr = new_addr;
+						mx25l512_read(&bus_data, &addr_read, pack.data, size);
+						addr_read = new_addr;
+						pack.size = size;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
+					break;
 				case CMD_OFF:
-					if (pack.size = 0)
+					if (pack.size == 0)
 					{
 						shift_reg_write_bit_8(&shift_reg, 6, 0);
 					}
-				case CMD_Read_gps:
-					if (pack.size = 2)
-					{
-
-						uint8_t num = pack.num;
-						uint32_t addr = (num % 9* 28) << 4 | (num / 9) << 12;
-
-						mx25l512_read(&bus, addr, pack.data, 28);
-					}
+					break;
 				case CMD_Write_flys_bit:
-					if (pack.size = 1)
+					if (pack.size == 1)
 					{
 
 					}
+					break;
 
 				case CMD_Radio_send:
 					if (pack.size <= 32)
 					{
-						nrf24_fifo_write(&nrf24, &pack.data, sizeof(&pack.data), false);
+						nrf24_fifo_write(&nrf24, pack.data, pack.size, false);
 					}
+					break;
 				case  CMD_Radio_send_d:
-					if(pack.size <= 32)
+					if(pack.size > 0 && pack.size <= 32)
 					{
-						memcpy(buf, i2c_pack.data, i2c_pack.size);
+						memcpy(buf, pack.data, pack.size);
+
 					}
+
+					if(pack.size == 0)
+					{
+						nrf24_fifo_write(&nrf24, buf, sizeof(buf), false);
+					}
+					break;
 				case CMD_Settings:
-					if(pack.size = 18)
+					if(pack.size == 18)
 					{
+						memcpy(&settings_pack, pack.data, pack.size);
+						nrf_config.data_rate = settings_pack.data_rate;
+						nrf_config.tx_power = settings_pack.tx_power;
+						nrf_config.rf_channel = settings_pack.rf_channel;
+						nrf24_setup_rf(&nrf24, &nrf_config);
+						nrf_protocol_config.address_width = settings_pack.address_width;
+						nrf_protocol_config.crc_size = settings_pack.crc_size;
+						nrf_protocol_config.en_dyn_payload_size = settings_pack.en_dyn_payload_size;
+						nrf_protocol_config.en_ack_payload = settings_pack.en_ack_payload;
+						nrf_protocol_config.en_dyn_ack = settings_pack.en_dyn_ack;
+
+						nrf_protocol_config.auto_retransmit_count = settings_pack.auto_retransmit_cout;
+						nrf_protocol_config.auto_retransmit_delay = settings_pack.auto_retransmit_delay;
+						nrf24_pipe_set_tx_addr(&nrf24, settings_pack.tx_channel);
+						nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
 
 					}
+					break;
 
-				}*/
+				}
 			}
-
-
-
-
 
 		int comp;
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
-		if (tx_status != NRF24_FIFO_FULL){
-				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
-				start_time_nrf = HAL_GetTick();
+		if (tx_status != NRF24_FIFO_FULL)
+		{
+			if (HAL_GetTick() - time_nrf >= 100){
+				nrf24_fifo_write(&nrf24, (uint8_t *)buf, sizeof(buf), false);
+				time_nrf = HAL_GetTick();
+			}
 		}
 		else
 		if (HAL_GetTick()-start_time_nrf >= 100)
 		{
 			nrf24_fifo_flush_tx(&nrf24);
-			nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
+			nrf24_fifo_write(&nrf24, (uint8_t *)buf, sizeof(buf), false);
 			start_time_nrf = HAL_GetTick();
 		}
 		nrf24_irq_get(&nrf24, &comp);
