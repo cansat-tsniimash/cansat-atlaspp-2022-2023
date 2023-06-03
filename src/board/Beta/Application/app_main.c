@@ -64,7 +64,7 @@ typedef enum
 	    CMD_Settings = 0x43
 	}cmd_t;
 
-uint8_t buf[30];
+uint8_t buf[32];
 
 typedef struct
 {
@@ -324,7 +324,7 @@ int app_main(){
 					{
 						uint16_t num = *((uint16_t *)pack.data);
 						uint32_t addr = (num % 9* 28) << 4 | (num / 9) << 12;
-						mx25l512_read(&bus_data, &addr, pack.data + 2, 28);
+						mx25l512_read(&bus_gps, &addr, pack.data + 2, 28);
 						pack.size = 28 + 2;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
