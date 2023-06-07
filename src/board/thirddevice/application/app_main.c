@@ -27,9 +27,18 @@
 
 int app_main(){
 	FATFS fileSystem;
-	FIL File_bin;
-	FRESULT res_bin = 255;
-	const char path_bin[] = "packet.bin";
+	FIL File_bin_alph;
+	FIL File_bin_beta;
+	FIL File_bin_gam;
+	FIL File;
+	FRESULT res_bin_a = 255;
+	FRESULT res_bin_b = 255;
+	FRESULT res_bin_g = 255;
+	FRESULT res = 255;
+	const char path_bin_a[] = "packeta.bin";
+	const char path_bin_b[] = "packetb.bin";
+	const char path_bin_g[] = "packetg.bin";
+	const char path[] = "packet.bin";
 	memset(&fileSystem, 0x00, sizeof(fileSystem));
 	FRESULT is_mount = 0;
 	extern Disk_drvTypeDef disk;
@@ -37,22 +46,42 @@ int app_main(){
 	is_mount = f_mount(&fileSystem, "", 1);
 	UINT Bytes;
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
-		res_bin = f_open(&File_bin, (char*)path_bin, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+		res = f_open(&File, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+		f_puts(" ", &File);
+		res = f_sync(&File);
 	}
-	uint32_t buf[32] = {0};
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res_bin_a = f_open(&File_bin_alph, (char*)path_bin_a, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res_bin_b = f_open(&File_bin_beta, (char*)path_bin_b, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res_bin_g = f_open(&File_bin_gam, (char*)path_bin_g, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+
+	int rc;
+	uint32_t buf[32] = {1};
 
 	while(1){
 		if(/*HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == */1){
-			bb_read_req(alpha_addr, 32, false);
-			bb_read(alpha_addr, (uint8_t *)buf, sizeof(buf));
-			if(res_bin == FR_OK){
-				res_bin = f_write(&File_bin, (uint8_t*)buf, sizeof(buf), &Bytes); // отправка на запись в файл
+			rc = bb_read_req(alpha_addr, 32, false);
+			rc = bb_read(alpha_addr, (uint8_t *)buf, sizeof(buf));
+			if(rc != 0){
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, true);
+			} else {
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, false);
+			}
+			if(res_bin_a == FR_OK){
+				res_bin_a = f_write(&File_bin_alph, (uint8_t*)buf, sizeof(buf), &Bytes); // отправка на запись в файл
+				res_bin_a = f_sync(&File_bin_alph);
 			}
 			for(int i = 0; i<255; i++){
 				bb_read_req(alpha_addr, 32, true);
 				bb_read(alpha_addr, (uint8_t *)buf, sizeof(buf));
-				if(res_bin == FR_OK){
-					res_bin = f_write(&File_bin, (uint8_t*)buf, sizeof(buf), &Bytes); // отправка на запись в файл
+				if(res_bin_a == FR_OK){
+					res_bin_a = f_write(&File_bin_alph, (uint8_t*)buf, sizeof(buf), &Bytes); // отправка на запись в файл
+					res_bin_a = f_sync(&File_bin_alph);
 				}
 			}
 		}
