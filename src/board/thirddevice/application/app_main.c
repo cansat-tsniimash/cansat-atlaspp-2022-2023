@@ -25,20 +25,36 @@
 #define beta_addr 0x77 << 1
 #define gamma_addr 0x78 << 1
 
+uint16_t sd_parse_to_bytes_pack(char *buffer, FRESULT is_mount, FRESULT res, int count, int count2) {
+	memset(buffer, 0, 300);
+	uint16_t num_written = snprintf(
+			buffer, 300,
+			"%d;%d;%d;%d\n",
+			is_mount, res, count, count2);
+	return num_written;
+}
+
 int app_main(){
 	FATFS fileSystem;
 	FIL File_bin_alph;
 	FIL File_bin_beta;
+	FIL File_bin_gps;
 	FIL File_bin_gam;
 	FIL File;
 	FRESULT res_bin_a = 255;
 	FRESULT res_bin_b = 255;
+	res_bin_b += 0;
+	FRESULT res_bin_gps = 255;
+	res_bin_gps += 0;
 	FRESULT res_bin_g = 255;
+	res_bin_g += 0;
 	FRESULT res = 255;
+	res += 0;
 	const char path_bin_a[] = "packeta.bin";
 	const char path_bin_b[] = "packetb.bin";
+	const char path_bin_gps[] = "packetgps.bin";
 	const char path_bin_g[] = "packetg.bin";
-	const char path[] = "packet.bin";
+	const char path[] = "packet.csv";
 	memset(&fileSystem, 0x00, sizeof(fileSystem));
 	FRESULT is_mount = 0;
 	extern Disk_drvTypeDef disk;
@@ -47,7 +63,7 @@ int app_main(){
 	UINT Bytes;
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res = f_open(&File, (char*)path, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		f_puts(" ", &File);
+		f_puts("is_mount; res_bin_a; count_read; count_file\n", &File);
 		res = f_sync(&File);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
@@ -57,33 +73,122 @@ int app_main(){
 		res_bin_b = f_open(&File_bin_beta, (char*)path_bin_b, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
+		res_bin_gps = f_open(&File_bin_gps, (char*)path_bin_gps, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
+	}
+	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res_bin_g = f_open(&File_bin_gam, (char*)path_bin_g, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
 	}
-
+	uint16_t str_wr;
 	int rc;
-	uint32_t buf[32] = {1};
-
+	uint32_t bufa[32] = {1};
+	uint32_t bufb[32] = {1};
+	uint32_t bufg[32] = {1};
+	uint32_t bufgps[32] = {1};
+	uint16_t count = 0;
+	uint16_t count_f = 0;
+	char str_buf[300];
 	while(1){
+		if(is_mount != 0){
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, true);
+		} else {
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, false);
+		}
 		if(/*HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == */1){
+			// Alpha
+			count = 0;
 			rc = bb_read_req(alpha_addr, 32, false);
-			rc = bb_read(alpha_addr, (uint8_t *)buf, sizeof(buf));
-			if(rc != 0){
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, true);
-			} else {
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, false);
+			if (rc == HAL_OK){
+				rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
+				count++;
 			}
 			if(res_bin_a == FR_OK){
-				res_bin_a = f_write(&File_bin_alph, (uint8_t*)buf, sizeof(buf), &Bytes); // отправка на запись в файл
+				res_bin_a = f_write(&File_bin_alph, (uint8_t*)bufa, sizeof(bufa), &Bytes); // отправка на запись в файл
 				res_bin_a = f_sync(&File_bin_alph);
+				count_f++;
 			}
-			for(int i = 0; i<255; i++){
-				bb_read_req(alpha_addr, 32, true);
-				bb_read(alpha_addr, (uint8_t *)buf, sizeof(buf));
+			for(int i = 0; i < 2/*55*/; i++){
+				rc = bb_read_req(alpha_addr, 32, true);
+				rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
+				count++;
 				if(res_bin_a == FR_OK){
-					res_bin_a = f_write(&File_bin_alph, (uint8_t*)buf, sizeof(buf), &Bytes); // отправка на запись в файл
+					res_bin_a = f_write(&File_bin_alph, (uint8_t*)bufa, sizeof(bufa), &Bytes); // отправка на запись в файл
 					res_bin_a = f_sync(&File_bin_alph);
+					count_f++;
 				}
 			}
+			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_a, count, count_f);
+			f_write(&File, str_buf, str_wr, &Bytes);
+			f_sync(&File);
+			count = 0;
+			count_f = 0;
+			// Beta
+			rc = bb_read_req(beta_addr, 32, false);
+			if(rc == HAL_OK){
+				rc = bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
+				count++;
+			}
+			if(res_bin_b == FR_OK){
+				res_bin_b = f_write(&File_bin_beta, (uint8_t*)bufb, sizeof(bufb), &Bytes); // отправка на запись в файл
+				res_bin_b = f_sync(&File_bin_beta);
+				count_f++;
+			}
+			for(int i = 0; i<2/*55*/; i++){
+				bb_read_req(beta_addr, 32, false);
+				bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
+				count++;
+				if(res_bin_b == FR_OK){
+					res_bin_b = f_write(&File_bin_beta, (uint8_t*)bufb, sizeof(bufb), &Bytes); // отправка на запись в файл
+					res_bin_b = f_sync(&File_bin_beta);
+					count_f++;
+				}
+			}
+			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_b, count, count_f);
+			f_write(&File, str_buf, str_wr, &Bytes);
+			f_sync(&File);
+			count = 0;
+			count_f = 0;
+			//beta gps
+			for(uint16_t i = 0; i<2/*88*/; i++){
+				bb_read_gps_req(beta_addr, i);
+				bb_read_gps(beta_addr, &i, (uint8_t *)bufgps, sizeof(bufgps));
+				count++;
+				if(res_bin_gps == FR_OK){
+					res_bin_gps = f_write(&File_bin_gps, (uint8_t*)bufgps, sizeof(bufgps), &Bytes); // отправка на запись в файл
+					res_bin_gps = f_sync(&File_bin_gps);
+					count_f++;
+				}
+			}
+			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_gps, count, count_f);
+			f_write(&File, str_buf, str_wr, &Bytes);
+			f_sync(&File);
+			count = 0;
+			count_f = 0;
+			//gamma
+			rc = bb_read_req(gamma_addr, 32, false);
+			if(rc == HAL_OK){
+				rc = bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
+				count++;
+			}
+			if(res_bin_g == FR_OK){
+				res_bin_g = f_write(&File_bin_gam, (uint8_t*)bufg, sizeof(bufg), &Bytes); // отправка на запись в файл
+				res_bin_g = f_sync(&File_bin_gam);
+				count_f++;
+			}
+			for(int i = 0; i<2/*55*/; i++){
+				bb_read_req(gamma_addr, 32, false);
+				bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
+				count++;
+				if(res_bin_g == FR_OK){
+					res_bin_g = f_write(&File_bin_gam, (uint8_t*)bufg, sizeof(bufg), &Bytes); // отправка на запись в файл
+					res_bin_g = f_sync(&File_bin_gam);
+					count_f++;
+				}
+			}
+			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_g, count, count_f);
+			f_write(&File, str_buf, str_wr, &Bytes);
+			f_sync(&File);
+			count = 0;
+			count_f = 0;
 		}
 	}
 	return 0;
