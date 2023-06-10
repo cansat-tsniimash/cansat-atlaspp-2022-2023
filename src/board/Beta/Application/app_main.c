@@ -200,9 +200,9 @@ int app_main(){
 	float alt;
 	//cmd_pack_t pack;
 
-	//gps_init();
-	//__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
-	//__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
+	gps_init();
+	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
+	__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
 
 	settings_pack_t settings_pack;
 

@@ -179,13 +179,23 @@ void USART2_IRQHandler(void)
 	    //__disable_irq();
 	//#pragma GCC diagnostic push;
 	//#pragma GCC diagnostic ignored "-Wunused-variable"
-	    volatile uint32_t sr = huart2.Instance->ISR;
+	/* UART Over-Run interrupt occurred -----------------------------------------*/
+	//HAL_UART_IRQHandler(&huart2);
+	volatile uint32_t byte = huart2.Instance->RDR;
+	uint32_t isrflags = READ_REG(huart2.Instance->ISR);
+	uint32_t cr1its = READ_REG(huart2.Instance->CR1);
+    uint32_t cr3its = READ_REG(huart2.Instance->CR3);
+	if (((isrflags & USART_ISR_ORE) != 0U)
+	        && (((cr1its & USART_CR1_RXNEIE) != 0U) ||
+	            ((cr3its & USART_CR3_EIE) != 0U)))
+	    {
+	      __HAL_UART_CLEAR_FLAG(&huart2, UART_CLEAR_OREF);
+	    }
 	//#pragma GCC diagnostic pop
-	    volatile uint32_t byte = huart2.Instance->RDR;
+
 	    //__enable_irq();
 
 	    gps_push_byte(byte);
-	    (void)sr;
 	  /* USER CODE END USART6_IRQn 0 */
 	  /* USER CODE BEGIN USART6_IRQn 1 */
 
@@ -200,4 +210,3 @@ void USART2_IRQHandler(void)
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
-
