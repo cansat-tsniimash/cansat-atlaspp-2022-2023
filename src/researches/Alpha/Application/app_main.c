@@ -139,101 +139,86 @@ int app_main(){
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
-		{
-			switch(pack.num){
-				case CMD_BUZ:
-					if (pack.size == 1)
-					{
-						if (pack.data[0])
-							shift_reg_write_bit_8(&shift_reg, 7, 1);//Вкл
-						else
-							shift_reg_write_bit_8(&shift_reg, 7, 0);//Выкл
-					}
-					break;
-				case CMD_CE:
-					if (pack.size == 0)
-						mx25l512_CE(&bus_data);//Затираю чип целиком
-					break;
+				{
+					switch(pack.num){
+						case CMD_BUZ:
+							if (pack.size == 1)
+							{
+								if (pack.data[0])
+									shift_reg_write_bit_8(&shift_reg, 7, 1);//Вкл
+								else
+									shift_reg_write_bit_8(&shift_reg, 7, 0);//Выкл
+							}
+							break;
+						case CMD_CE:
+							if (pack.size == 0)
+								mx25l512_CE_up(&bus_data, 10);//Затираю чип целиком
+							break;
 
-				case CMD_ReadADDR:
-					if ((pack.size = 5) && (pack.data[4] <= 32))
-					{
-						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						uint8_t size = pack.data[4];
-						mx25l512_read(&bus_data, &addr, pack.data, size);//читаю данные
-						pack.size = size;
-						its_i2c_link_write(&pack, sizeof(pack));
-					}
-					break;
-				case CMD_Write:
-					if (pack.size <= 32)
-					{
-						//uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						//mx25l512_PP(&bus_data, &addr, pack.data + 4, pack.size - 4);//Записываю данные
-					}
-					break;
-				case CMD_Read:
-					if (pack.size == 1 && pack.data[0] <= 32)
-					{
-						addr = 0x0000;
-						uint8_t size = pack.data[0];
-						mx25l512_read(&bus_data, &addr, pack.data, size);
-						addr = size << 4;
-						its_i2c_link_write(&pack, sizeof(pack));
+						case CMD_ReadADDR:
+							if ((pack.size = 5) && (pack.data[4] <= 32))
+							{
+								uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+								uint8_t size = pack.data[4];
+								mx25l512_read(&bus_data, &addr, pack.data + 4, size);//читаю данные
+								pack.size = size + 4;
+								its_i2c_link_write(&pack, sizeof(pack));
+							}
+							break;
+						case CMD_Write:
+							if (pack.size <= 32)
+							{
+								addr_write = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+								mx25l512_PP_up(&bus_data, &addr_write, pack.data + 4, pack.size - 4, 10);//Записываю данные
+							}
+							break;
+						case CMD_Read:
+							if (pack.size == 1 && pack.data[0] <= 32)
+							{
+								addr_read = 0x0000;
+								uint8_t size = pack.data[0];
+								mx25l512_read(&bus_data, &addr_read, pack.data, size);
+								addr_read = size << 4;
+								pack.size = size;
+								its_i2c_link_write(&pack, sizeof(pack));
 
-					}
-				case CMD_Continue:
-					if (pack.size == 1 && pack.data[0] <= 32)
-					{
-						uint8_t size = pack.data[0];
-						uint8_t new_addr = addr + (size << 4);
-						if (addr && (0x0f << 12) != new_addr && (0x0f << 12))
-						{
-							addr = new_addr && (0x0f << 12);
-							new_addr = addr + (sizeof(pack) << 4);
+							}
+							break;
+						case CMD_Continue:
+							if (pack.size == 1 && pack.data[0] <= 32)
+							{
+								uint8_t size = pack.data[0];
+								uint32_t new_addr = addr + (size << 4);
+								if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+								{
+									addr_read = new_addr & (0x0f << 12);
+									new_addr = addr_read + (sizeof(pack) << 4);
+								}
+								mx25l512_read(&bus_data, &addr_read, pack.data, size);
+								addr_read = new_addr;
+								pack.size = size;
+								its_i2c_link_write(&pack, sizeof(pack));
+							}
+							break;
+						case CMD_OFF:
+							if (pack.size == 0)
+							{
+								shift_reg_write_bit_8(&shift_reg, 6, 0);
+							}
+							break;
+
+						case CMD_Write_flys_bit:
+							if (pack.size == 1)
+							{
+
+							}
+							break;
+
+
+
+
 						}
-						mx25l512_read(&bus_data, &addr, pack.data, size);
-						addr = new_addr;
-						its_i2c_link_write(&pack, sizeof(pack));
 					}
-				case CMD_OFF:
-					if (pack.size == 0)
-					{
-						shift_reg_write_bit_8(&shift_reg, 6, 0);
-					}
-				case CMD_Read_gps:
-					if (pack.size == 2)
-					{
-
-						uint8_t num = pack.num;
-						uint32_t addr = (num % 9* 28) << 4 | (num / 9) << 12;
-						mx25l512_read(&bus_data, &addr, pack.data, 28);
-					}
-				case CMD_Write_flys_bit:
-					if (pack.size == 1)
-					{
-
-					}
-
-
-
-
-					if(pack.size == 0)
-					{
-						nrf24_fifo_write(&nrf24, buf, sizeof(buf), false);
-					}
-
-
-
-
-
-
-
-
-					}
-
-				}
-			}
 
 
 
