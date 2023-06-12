@@ -53,7 +53,7 @@ static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
-
+int app_main();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -100,6 +100,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  app_main();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -319,24 +320,24 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, oe_Pin|pwr_ctrl_Pin|BUZZER_Pin|LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, pwr_Pin|Buzzer_Pin|LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(latch_GPIO_Port, latch_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : oe_Pin pwr_ctrl_Pin BUZZER_Pin LED_Pin */
-  GPIO_InitStruct.Pin = oe_Pin|pwr_ctrl_Pin|BUZZER_Pin|LED_Pin;
+  /*Configure GPIO pins : pwr_Pin Buzzer_Pin LED_Pin */
+  GPIO_InitStruct.Pin = pwr_Pin|Buzzer_Pin|LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : latch_Pin */
-  GPIO_InitStruct.Pin = latch_Pin;
+  /*Configure GPIO pin : CS_Pin */
+  GPIO_InitStruct.Pin = CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(latch_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(CS_GPIO_Port, &GPIO_InitStruct);
 
 }
 

@@ -92,6 +92,11 @@ typedef struct
 void off_bb(shift_reg_t *shift_reg){
 	shift_reg_write_bit_8(shift_reg, 3, true);
 }
+
+void on_bb(shift_reg_t *shift_reg){
+	shift_reg_write_bit_8(shift_reg, 3, false);
+}
+
 void buzzer_control(shift_reg_t *shift_reg, bool onoff){
 	shift_reg_write_bit_8(shift_reg, 7, onoff);
 }
@@ -116,7 +121,38 @@ int app_main(){
 	shift_reg.oe_port = GPIOA;
 	shift_reg.oe_pin = GPIO_PIN_1;
 	shift_reg_init(&shift_reg);
-	shift_reg_write_8(&shift_reg, 0x70);
+	shift_reg_oe(&shift_reg, false);
+	shift_reg_write_8(&shift_reg, 0xF0);
+	on_bb(&shift_reg);
+
+	bus_t bus_data;
+	mx25l512_spi_pins_sr_t mx25_data_pins;
+	mx25_data_pins.this = &shift_reg;
+	mx25_data_pins.pos_CS = 6;
+	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
+
+
+	uint8_t byte_r = 0;
+	uint8_t byte_w = 74;
+	uint8_t stat_reg = 0;
+
+	uint32_t addr2 = 8;
+
+	while(1)
+	{
+
+		mx25l512_CE_up(&bus_data, 1000);
+		HAL_Delay(42);
+		mx25l512_RES(&bus_data, &byte_r);
+		mx25l512_rdsr(&bus_data, &stat_reg);
+		mx25l512_read(&bus_data, &addr2, &byte_r, 1);//читаю данные
+		mx25l512_PP_up(&bus_data, &addr2, &byte_w, 1, 1000);
+		HAL_Delay(42);
+		mx25l512_read(&bus_data, &addr2, &byte_r, 1);//читаю данные
+		byte_r = 0;
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+		HAL_Delay(100);
+	}
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
@@ -160,11 +196,6 @@ int app_main(){
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
 
-	bus_t bus_data;
-	mx25l512_spi_pins_sr_t mx25_data_pins;
-	mx25_data_pins.this = &shift_reg;
-	mx25_data_pins.pos_CS = 6;
-	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
 	uint32_t addr_write = 0;
 	uint32_t addr_read = 0;
 	int nrf_irq;
@@ -176,6 +207,7 @@ int app_main(){
 	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
 	while(1){
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)

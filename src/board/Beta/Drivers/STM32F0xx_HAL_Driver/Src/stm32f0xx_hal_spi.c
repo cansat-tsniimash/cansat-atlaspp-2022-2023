@@ -3956,7 +3956,8 @@ static HAL_StatusTypeDef SPI_WaitFifoStateUntilTimeout(SPI_HandleTypeDef *hspi, 
   __IO uint8_t  tmpreg8 = 0;
 
   /* Adjust Timeout value  in case of end of transfer */
-  tmp_timeout = Timeout - (HAL_GetTick() - Tickstart); tmp_tickstart = HAL_GetTick();
+  tmp_timeout = Timeout - (HAL_GetTick() - Tickstart);
+  tmp_tickstart = HAL_GetTick();
 
   /* Initialize the 8bit temporary pointer */
   ptmpreg8 = (__IO uint8_t *)&hspi->Instance->DR;

@@ -106,6 +106,17 @@ typedef struct
 #pragma pack(pop)
 
 
+void off_bb(shift_reg_t *shift_reg){
+	shift_reg_write_bit_8(shift_reg, 6, true);
+}
+
+void on_bb(shift_reg_t *shift_reg){
+	shift_reg_write_bit_8(shift_reg, 6, false);
+}
+
+void buzzer_control(shift_reg_t *shift_reg, bool onoff){
+	shift_reg_write_bit_8(shift_reg, 3, onoff);
+}
 
 
 int app_main(){
@@ -127,9 +138,69 @@ int app_main(){
 	shift_reg.latch_port = GPIOB;
 	shift_reg.latch_pin = GPIO_PIN_1;
 	shift_reg.oe_port = GPIOA;
-	shift_reg.oe_pin = GPIO_PIN_0;
+	shift_reg.oe_pin = GPIO_PIN_1;
 	shift_reg_init(&shift_reg);
-	shift_reg_write_8(&shift_reg, 0x70);
+	shift_reg_oe(&shift_reg, false);
+
+	shift_reg_write_8(&shift_reg, 0x2E);
+	on_bb(&shift_reg);
+
+
+	gps_init();
+
+	int64_t cookie;
+	float lat;
+	float lon;
+	float alt;
+	int fix;
+
+	bus_t bus_data;
+	mx25l512_spi_pins_sr_t mx25_data_pins;
+	mx25_data_pins.this = &shift_reg;
+	mx25_data_pins.pos_CS = 1;
+	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
+
+	bus_t bus_gps;
+	mx25l512_spi_pins_sr_t mx25_gps_pins;
+	mx25_gps_pins.this = &shift_reg;
+	mx25_gps_pins.pos_CS = 2;
+	mx25l512_spi_init_sr(&bus_gps, &hspi1, &mx25_gps_pins);
+	uint8_t byte_r = 0;
+	uint8_t byte_w = 0x4A;
+	uint32_t addr = 8;
+	uint8_t stat_reg = 0;
+	uint8_t data3[3] = {0 };
+
+	while(1)
+	{
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+		//uint8_t byte = 0;
+		//volatile HAL_StatusTypeDef re = HAL_UART_Receive(&huart2, &byte, 1, 1000);
+		//gps_push_byte(byte);
+		//gps_work();
+		//gps_get_coords(&cookie, &lat, &lon, &alt, &fix);
+
+		mx25l512_CE_up(&bus_data, 1000);
+		HAL_Delay(42);
+		mx25l512_RES(&bus_data, &byte_r);
+		mx25l512_rdsr(&bus_data, &stat_reg);
+		mx25l512_read(&bus_data, &addr, &byte_r, 1);//читаю данные
+		mx25l512_PP_up(&bus_data, &addr, &byte_w, 1, 1000);
+		HAL_Delay(42);
+		mx25l512_read(&bus_data, &addr, &byte_r, 1);//читаю данные
+		byte_r = 0;
+
+		mx25l512_CE_up(&bus_gps, 1000);
+		HAL_Delay(42);
+		mx25l512_RES(&bus_gps, &byte_r);
+		mx25l512_rdsr(&bus_gps, &stat_reg);
+		mx25l512_read(&bus_gps, &addr, &byte_r, 1);//читаю данные
+		mx25l512_PP_up(&bus_gps, &addr, &byte_w, 1, 1000);
+		HAL_Delay(42);
+		mx25l512_read(&bus_gps, &addr, &byte_r, 1);//читаю данные
+		byte_r = 0;
+
+	}
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
@@ -173,31 +244,20 @@ int app_main(){
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
 
-	bus_t bus_data;
-	mx25l512_spi_pins_sr_t mx25_data_pins;
-	mx25_data_pins.this = &shift_reg;
-	mx25_data_pins.pos_CS = 1;
-	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
 
-	bus_t bus_gps;
-	mx25l512_spi_pins_sr_t mx25_gps_pins;
-	mx25_gps_pins.this = &shift_reg;
-	mx25_gps_pins.pos_CS = 2;
-	mx25l512_spi_init_sr(&bus_gps, &hspi1, &mx25_gps_pins);
 
 	int nrf_irq;
 	uint32_t start_time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
 
 	uint8_t Data[3];
-	uint32_t addr;
 	int fix_;
-	int64_t cookie;
+	//int64_t cookie;
 	uint64_t time_s_;
 	uint32_t time_us_;
-	float lat;
-	float lon;
-	float alt;
+	//float lat;
+	//float lon;
+	//float alt;
 	//cmd_pack_t pack;
 
 	gps_init();
@@ -206,13 +266,13 @@ int app_main(){
 
 	settings_pack_t settings_pack;
 
-	uint8_t byte_r = 0;
-	uint8_t byte_w = 0x4A;
+
 	nrf_pack_t nrf_pack;
     nrf_pack.flag = 0x0f;
     nrf_pack.num = 0;
 
 	while(1){
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 		//mx25l512_rdid(&bus_data, Data);
 		//HAL_Delay(10);
 

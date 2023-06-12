@@ -53,7 +53,7 @@ static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
-
+int app_main();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -98,8 +98,9 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
+    while (1)
   {
+    app_main();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
