@@ -121,9 +121,9 @@ int app_main(){
 	shift_reg.oe_port = GPIOA;
 	shift_reg.oe_pin = GPIO_PIN_1;
 	shift_reg_init(&shift_reg);
-	shift_reg_oe(&shift_reg, false);
 	shift_reg_write_8(&shift_reg, 0xF0);
 	on_bb(&shift_reg);
+	shift_reg_oe(&shift_reg, false);
 
 	bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
@@ -140,6 +140,11 @@ int app_main(){
 
 	while(1)
 	{
+		break;
+		buzzer_control(&shift_reg, true);
+		HAL_Delay(100);
+		buzzer_control(&shift_reg, false);
+
 
 		mx25l512_CE_up(&bus_data, 1000);
 		HAL_Delay(42);

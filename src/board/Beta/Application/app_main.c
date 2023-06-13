@@ -140,10 +140,13 @@ int app_main(){
 	shift_reg.oe_port = GPIOA;
 	shift_reg.oe_pin = GPIO_PIN_1;
 	shift_reg_init(&shift_reg);
-	shift_reg_oe(&shift_reg, false);
-
 	shift_reg_write_8(&shift_reg, 0x2E);
 	on_bb(&shift_reg);
+	buzzer_control(&shift_reg, false);
+	shift_reg_oe(&shift_reg, false);
+
+
+
 
 
 	gps_init();
@@ -173,6 +176,10 @@ int app_main(){
 
 	while(1)
 	{
+		break;
+		buzzer_control(&shift_reg, true);
+		HAL_Delay(100);
+		buzzer_control(&shift_reg, false);
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 		//uint8_t byte = 0;
 		//volatile HAL_StatusTypeDef re = HAL_UART_Receive(&huart2, &byte, 1, 1000);
@@ -204,8 +211,8 @@ int app_main(){
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
-	nrf_pins.pos_CE = 5;
-	nrf_pins.pos_CS = 4;
+	nrf_pins.pos_CE = 4;
+	nrf_pins.pos_CS = 5;
 	nrf24_lower_api_config_t nrf24;
 	nrf24_spi_init_sr(&nrf24, &hspi1, &nrf_pins);
 
@@ -262,7 +269,7 @@ int app_main(){
 
 	gps_init();
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
-	__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
+	//__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
 
 	settings_pack_t settings_pack;
 
@@ -271,41 +278,21 @@ int app_main(){
     nrf_pack.flag = 0x0f;
     nrf_pack.num = 0;
 
+    uint32_t addr_read = 0;
+    uint32_t addr_write = 0;
+
 	while(1){
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-		//mx25l512_rdid(&bus_data, Data);
-		//HAL_Delay(10);
 
 		gps_work();
 		gps_get_coords(&cookie, &lat, &lon, &alt, &fix_);
 		gps_get_time(&cookie, &time_s_, &time_us_);
-		nrf_pack.lat = lat;
+ 		nrf_pack.lat = lat;
 		nrf_pack.lon = lon;
 		nrf_pack.alt = alt;
 		nrf_pack.fix = fix_;
 		nrf_pack.gps_time_s = time_s_;
 		nrf_pack.gps_time_us = time_us_;
-
-
-		HAL_Delay(1);
-		//shift_reg_write_bit_8(&shift_reg, 7, 1);
-		//HAL_Delay(100);
-		//shift_reg_write_bit_8(&shift_reg, 7, 0);
-		//HAL_Delay(100);
-		//const char hello[] = "hello i'm a bus";
-		//int rrc = its_i2c_link_write(hello, sizeof(hello));
-
-
-		mx25l512_CE_up(&bus_data, 1000);
-		HAL_Delay(42);
-		mx25l512_read(&bus_data, &addr, &byte_r, 1);//читаю данные
-		mx25l512_PP_up(&bus_data, &addr, &byte_w, 1, 1000);
-		HAL_Delay(42);
-		mx25l512_read(&bus_data, &addr, &byte_r, 1);//читаю данные
-		byte_r = 0;
-
-		uint32_t addr_write = 0;
-		uint32_t addr_read = 0;
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
@@ -440,10 +427,6 @@ int app_main(){
 			}
 
 
-
-
-
-		int comp;
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
 				nrf_pack.time_s = HAL_GetTick();
@@ -451,18 +434,18 @@ int app_main(){
 				nrf_pack.num++;
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
 				start_time_nrf = HAL_GetTick();
-
 		}
 		else
-		if (HAL_GetTick()-start_time_nrf >= 100)
-		{
-			nrf24_fifo_flush_tx(&nrf24);
-			nrf_pack.time_s = HAL_GetTick();
-			nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
-			nrf_pack.num++;
-			nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
-			start_time_nrf = HAL_GetTick();
-		}
+			if (HAL_GetTick()-start_time_nrf >= 100)
+			{
+				nrf24_fifo_flush_tx(&nrf24);
+				nrf_pack.time_s = HAL_GetTick();
+				nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
+				nrf_pack.num++;
+				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
+				start_time_nrf = HAL_GetTick();
+			}
+		int comp;
 		nrf24_irq_get(&nrf24, &comp);
 		nrf24_irq_clear(&nrf24, comp);
 	}
