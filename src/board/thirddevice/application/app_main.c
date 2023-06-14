@@ -80,11 +80,12 @@ int app_main(){
 	}
 	uint16_t str_wr;
 	int rc;
-	uint32_t bufa[32] = {1};
-	uint32_t bufb[32] = {1};
-	uint32_t bufg[32] = {1};
-	uint32_t bufgps[32] = {1};
+	uint8_t bufa[32] = {1};
+	uint8_t bufb[32] = {1};
+	uint8_t bufg[32] = {1};
+	uint8_t bufgps[32] = {1};
 	uint16_t count = 0;
+	uint16_t counter = 0;
 	uint16_t count_f = 0;
 	char str_buf[300];
 	while(1){
@@ -100,16 +101,22 @@ int app_main(){
 			if (rc == HAL_OK){
 				rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
 				count++;
+			} else {
+				counter++;
 			}
 			if(res_bin_a == FR_OK){
 				res_bin_a = f_write(&File_bin_alph, (uint8_t*)bufa, sizeof(bufa), &Bytes); // отправка на запись в файл
 				res_bin_a = f_sync(&File_bin_alph);
 				count_f++;
 			}
-			for(int i = 0; i < 2/*55*/; i++){
+			for(int i = 0; i < 255; i++){
 				rc = bb_read_req(alpha_addr, 32, true);
-				rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
-				count++;
+				if (rc == HAL_OK){
+					rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
+					count++;
+				} else {
+					counter++;
+				}
 				if(res_bin_a == FR_OK){
 					res_bin_a = f_write(&File_bin_alph, (uint8_t*)bufa, sizeof(bufa), &Bytes); // отправка на запись в файл
 					res_bin_a = f_sync(&File_bin_alph);
@@ -126,16 +133,22 @@ int app_main(){
 			if(rc == HAL_OK){
 				rc = bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
 				count++;
+			} else {
+				counter++;
 			}
-			if(res_bin_b == FR_OK){
+			if(res_bin_b == FR_OK && rc == HAL_OK){
 				res_bin_b = f_write(&File_bin_beta, (uint8_t*)bufb, sizeof(bufb), &Bytes); // отправка на запись в файл
 				res_bin_b = f_sync(&File_bin_beta);
 				count_f++;
 			}
-			for(int i = 0; i<2/*55*/; i++){
-				bb_read_req(beta_addr, 32, false);
-				bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
-				count++;
+			for(int i = 0; i<255; i++){
+				rc = bb_read_req(beta_addr, 32, true);
+				if(rc == HAL_OK){
+					rc = bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
+					count++;
+				} else {
+					counter++;
+				}
 				if(res_bin_b == FR_OK){
 					res_bin_b = f_write(&File_bin_beta, (uint8_t*)bufb, sizeof(bufb), &Bytes); // отправка на запись в файл
 					res_bin_b = f_sync(&File_bin_beta);
@@ -148,10 +161,15 @@ int app_main(){
 			count = 0;
 			count_f = 0;
 			//beta gps
-			for(uint16_t i = 0; i<2/*88*/; i++){
-				bb_read_gps_req(beta_addr, i);
-				bb_read_gps(beta_addr, &i, (uint8_t *)bufgps, sizeof(bufgps));
-				count++;
+			for(uint16_t i = 0; i<288; i++){
+				uint16_t num = i;
+				rc = bb_read_gps_req(beta_addr, num);
+				if(rc == HAL_OK){
+					rc = bb_read_gps(beta_addr, &num, (uint8_t *)bufgps, sizeof(bufgps));
+					count++;
+				} else {
+					counter++;
+				}
 				if(res_bin_gps == FR_OK){
 					res_bin_gps = f_write(&File_bin_gps, (uint8_t*)bufgps, sizeof(bufgps), &Bytes); // отправка на запись в файл
 					res_bin_gps = f_sync(&File_bin_gps);
@@ -168,16 +186,22 @@ int app_main(){
 			if(rc == HAL_OK){
 				rc = bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
 				count++;
+			} else {
+				counter++;
 			}
 			if(res_bin_g == FR_OK){
 				res_bin_g = f_write(&File_bin_gam, (uint8_t*)bufg, sizeof(bufg), &Bytes); // отправка на запись в файл
 				res_bin_g = f_sync(&File_bin_gam);
 				count_f++;
 			}
-			for(int i = 0; i<2/*55*/; i++){
-				bb_read_req(gamma_addr, 32, false);
-				bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
-				count++;
+			for(int i = 0; i<255; i++){
+				rc = bb_read_req(gamma_addr, 32, true);
+				if(rc == HAL_OK){
+					rc = bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
+					count++;
+				} else {
+					counter++;
+				}
 				if(res_bin_g == FR_OK){
 					res_bin_g = f_write(&File_bin_gam, (uint8_t*)bufg, sizeof(bufg), &Bytes); // отправка на запись в файл
 					res_bin_g = f_sync(&File_bin_gam);
