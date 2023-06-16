@@ -109,7 +109,7 @@ int app_main(){
 				res_bin_a = f_sync(&File_bin_alph);
 				count_f++;
 			}
-			for(int i = 0; i < 255; i++){
+			for(int i = 0; i < 2/*55*/; i++){
 				rc = bb_read_req(alpha_addr, 32, true);
 				if (rc == HAL_OK){
 					rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
@@ -124,8 +124,8 @@ int app_main(){
 				}
 			}
 			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_a, count, count_f);
-			f_write(&File, str_buf, str_wr, &Bytes);
-			f_sync(&File);
+//			f_write(&File, str_buf, str_wr, &Bytes);
+//			f_sync(&File);
 			count = 0;
 			count_f = 0;
 			// Beta
@@ -141,7 +141,7 @@ int app_main(){
 				res_bin_b = f_sync(&File_bin_beta);
 				count_f++;
 			}
-			for(int i = 0; i<255; i++){
+			for(int i = 0; i<2/*55*/; i++){
 				rc = bb_read_req(beta_addr, 32, true);
 				if(rc == HAL_OK){
 					rc = bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
@@ -156,12 +156,12 @@ int app_main(){
 				}
 			}
 			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_b, count, count_f);
-			f_write(&File, str_buf, str_wr, &Bytes);
-			f_sync(&File);
+//			f_write(&File, str_buf, str_wr, &Bytes);
+//			f_sync(&File);
 			count = 0;
 			count_f = 0;
 			//beta gps
-			for(uint16_t i = 0; i<288; i++){
+			for(uint16_t i = 0; i<2/*88*/; i++){
 				uint16_t num = i;
 				rc = bb_read_gps_req(beta_addr, num);
 				if(rc == HAL_OK){
@@ -177,8 +177,8 @@ int app_main(){
 				}
 			}
 			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_gps, count, count_f);
-			f_write(&File, str_buf, str_wr, &Bytes);
-			f_sync(&File);
+//			f_write(&File, str_buf, str_wr, &Bytes);
+//			f_sync(&File);
 			count = 0;
 			count_f = 0;
 			//gamma
@@ -194,7 +194,7 @@ int app_main(){
 				res_bin_g = f_sync(&File_bin_gam);
 				count_f++;
 			}
-			for(int i = 0; i<255; i++){
+			for(int i = 0; i<2/*55*/; i++){
 				rc = bb_read_req(gamma_addr, 32, true);
 				if(rc == HAL_OK){
 					rc = bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
@@ -209,8 +209,8 @@ int app_main(){
 				}
 			}
 			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_g, count, count_f);
-			f_write(&File, str_buf, str_wr, &Bytes);
-			f_sync(&File);
+//  		f_write(&File, str_buf, str_wr, &Bytes);
+//			f_sync(&File);
 			count = 0;
 			count_f = 0;
 		}
