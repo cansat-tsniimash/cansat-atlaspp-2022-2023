@@ -108,7 +108,7 @@ int app_main(){
 	its_i2c_link_start();
 
 //variables
-	uint64_t tx_adrr = 0xafafafaf01;
+/*	uint64_t tx_adrr = 0xafafafaf01;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
 	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
@@ -136,9 +136,9 @@ int app_main(){
 	uint8_t byte_w = 74;
 	uint8_t stat_reg = 0;
 
-	uint32_t addr2 = 8;
+	uint32_t addr2 = 8;*/
 
-	while(1)
+/*	while(1)
 	{
 		break;
 		buzzer_control(&shift_reg, true);
@@ -157,9 +157,9 @@ int app_main(){
 		byte_r = 0;
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 		HAL_Delay(100);
-	}
+	}*/
 
-	nrf24_spi_pins_sr_t nrf_pins;
+/*	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
 	nrf_pins.pos_CE = 5;
 	nrf_pins.pos_CS = 4;
@@ -199,7 +199,7 @@ int app_main(){
 	nrf24_pipe_rx_start(&nrf24, 0, &pipe_config);
 
 	nrf24_mode_standby(&nrf24);
-	nrf24_mode_tx(&nrf24);
+	nrf24_mode_tx(&nrf24);*/
 
 	uint32_t addr_write = 0;
 	uint32_t addr_read = 0;
@@ -212,10 +212,10 @@ int app_main(){
 	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
 	while(1){
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+		//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
-		if (rc > 0)
+/*		if (rc > 0)
 		{
 			switch(pack.num){
 				case CMD_BUZ:
@@ -330,9 +330,9 @@ int app_main(){
 					break;
 
 				}
-			}
+			}*/
 
-		int comp;
+/*		int comp;
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL)
 		{
@@ -349,7 +349,7 @@ int app_main(){
 			start_time_nrf = HAL_GetTick();
 		}
 		nrf24_irq_get(&nrf24, &comp);
-		nrf24_irq_clear(&nrf24, comp);
+		nrf24_irq_clear(&nrf24, comp);*/
 	}
 
 }

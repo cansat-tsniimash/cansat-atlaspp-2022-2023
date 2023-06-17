@@ -21,9 +21,9 @@
 #include <string.h>
 #include <bb.h>
 #include <ff.h>
-#define alpha_addr 0x76 << 1
-#define beta_addr 0x77 << 1
-#define gamma_addr 0x78 << 1
+#define alpha_addr 0x42 << 1
+#define beta_addr 0x43 << 1
+#define gamma_addr 0x44 << 1
 
 uint16_t sd_parse_to_bytes_pack(char *buffer, FRESULT is_mount, FRESULT res, int count, int count2) {
 	memset(buffer, 0, 300);

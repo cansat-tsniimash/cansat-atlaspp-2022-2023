@@ -5,7 +5,7 @@
 #include <stm32f0xx_hal.h>
 
 //! Адрес ведомого в 7мибитном формате, с выравниванием по правому краю
-#define I2C_LINK_ADDR (0x78)
+#define I2C_LINK_ADDR (0x44)
 
 // Проритеты I2C прерываний
 #define I2C_LINK_IRQn I2C1_IRQn
