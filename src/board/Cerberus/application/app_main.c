@@ -81,7 +81,7 @@ int app_main(){
 	is_mount = f_mount(&fileSystem, "", 1);
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		f_puts("flag; num; time_s; accl1; accl2; accl3; gyro1; gyro2; gyro3; mag1; mag2; mag3; bmp_temp; bmp_press; crc\n", &File1);
+		f_puts("flag; num; time_s; accl1; accl2; accl3; gyro1; gyro2; gyro3; mag1; mag2; mag3; crc\n", &File1);
 		res1 = f_sync(&File1);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
@@ -91,7 +91,7 @@ int app_main(){
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		f_puts("flag; num; time_s; fhotores; status; crc\n", &File3);
+		f_puts("flag; num; time_s; bmp_temp; bmp_press; fhotores; status; crc\n", &File3);
 		res3 = f_sync(&File3);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
@@ -182,21 +182,16 @@ int app_main(){
 	uint32_t start_time_sd = HAL_GetTick();
 	nrf24_fifo_status_t rx_status = NRF24_FIFO_EMPTY;
 	nrf24_fifo_status_t tx_status = NRF24_FIFO_EMPTY;
-	double height = 0;
 	float limit_lux;
-	height += 0;
-	int count = 1;
-	count += 0;
 	int counter = 0;
 	UINT Bytes;
 	int comp = 0;
-
-
+	int fast_count = 0;
 	//структура бме даты
 	struct bme280_data bme_data;
 	bme_data = bme_read_data(&bme);
 	//давление на земле
-	double ground_pressure = bme_data.pressure;
+	//double ground_pressure = bme_data.pressure;
 
 	ds18b20_start_conversion(&ds);
 
@@ -204,7 +199,6 @@ int app_main(){
 	state_now = STATE_READY;
 	state_nrf_t state_nrf;
 	state_nrf = STATE_GEN_PACK_1_3;
-
 
 	pack1_t pack1;
 	pack1.num = 0;
@@ -232,7 +226,7 @@ int app_main(){
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
 	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
-	nrf_config.rf_channel = 112;
+	nrf_config.rf_channel = 30;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
@@ -278,54 +272,17 @@ int app_main(){
 
 	uint16_t str_wr;
 	char str_buf[300];
-	uint8_t buf[40] = {1, 2, 3};
-	uint32_t addr = 10;
-	uint16_t num = 1;
-	nrf_pack_t gps_pack;
-	settings_pack_t settings_pack;
-	settings_pack.data_rate = NRF24_DATARATE_250_KBIT;
-	settings_pack.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
-	settings_pack.rf_channel = 112;
-	settings_pack.crc_size = NRF24_CRCSIZE_1BYTE;
-	settings_pack.address_width = NRF24_ADDRES_WIDTH_5_BYTES;
-	settings_pack.en_dyn_payload_size = true;
-	settings_pack.en_ack_payload = true;
-	settings_pack.en_dyn_ack = true;
-	settings_pack.tx_chanel = 0x123456789a;
-	settings_pack.auto_retransmit_count = 0;
-	settings_pack.auto_retransmit_delay = 0;
-	uint16_t fast_count = 0;
+
 	char data[] = "Hello, World!";
 	while(1){
 		bb_radio_send_d(gamma_addr, (uint8_t *)data, sizeof(data));
 		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
-		double pressure = bme_data.pressure;
-		height = 44330 * (1 - pow(pressure / ground_pressure, 1.0 / 5.255));
+		//height = 44330 * (1 - pow(pressure / ground_pressure, 1.0 / 5.255));
 		float lux = photorezistor_get_lux(photrez);
 		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);
 		lisread(&ctx_lis, &temperature_celsius_mag, &mag);
 
-		////bb_chip_err(beta_addr);
-		////bb_gps_err(beta_addr);
-		////bb_read_req(beta_addr, 32, false);
-		////HAL_Delay(1);
-		////bb_read(beta_addr, buf, 32);
-		////bb_read_req(beta_addr, 32, true);
-		////HAL_Delay(1);
-		////bb_read(beta_addr, buf, 32);
-		////bb_write(beta_addr, buf, sizeof(buf));
-		////bb_read_req_addr(beta_addr, 0, 32);
-
-		////bb_read_addr(beta_addr, &addr, buf, 32);
-		////bb_off(beta_addr);
-		////bb_read_gps_req(beta_addr, 1);
-		////bb_read_gps(beta_addr, &num, (uint8_t *)&gps_pack, sizeof(gps_pack));
-		////bb_write_flys_bit(beta_addr, true);
-	    ////bb_radio_send(beta_addr, buf, sizeof(buf));
-		//bb_radio_send_d(beta_addr, buf, sizeof(buf));
-		////bb_radio_send_d(beta_addr, buf, 0);
-		////bb_settings_pack(beta_addr, &settings_pack);
 		if(is_mount == FR_OK){
 			mount = true;
 		}
@@ -363,30 +320,16 @@ int app_main(){
 
 
 		//packets
-
-		pack1.time_s = 1;
-		pack2.time_s = 1;
-		pack3.time_s = 1;
-		pack4.time_s = 1;
-		pack1.crc = 1;
-		pack2.crc = 1;
-		pack3.crc = 1;
-		pack4.crc = 1;
-
 		for (int i = 0; i < 3; i++){
 			pack1.accl[i] = acc_g[i]*1000;
-			pack1.gyro[i] = gyro_dps[i]*1000; //<-----
+			pack1.gyro[i] = gyro_dps[i]*1000;
 			pack1.mag[i] = mag[i]*1000;
-		}
-		for (int i = 0; i < 3; i++)
-		{
-			pack1.bmp_temp = bme_data.temperature;
 		}
 		gps_work();
 		gps_get_coords(&cookie, &pack2.lat, &pack2.lon, &pack2.alt, &fix_);
 		gps_get_time(&cookie, &gps_time_s, &pack4.gps_time_us);
-		pack1.bmp_temp = bme_data.temperature*100;
-		pack1.bmp_press = pressure;
+		pack3.bmp_temp = bme_data.temperature * 100;
+		pack3.bmp_press = bme_data.pressure;
 		pack3.fhotorez = lux;
 		pack2.fix = fix_;
 		pack4.gps_time_s = gps_time_s;
@@ -449,11 +392,11 @@ int app_main(){
 
 		switch(state_nrf){
 		case STATE_GEN_PACK_1_3:
-			pack1.time_s = HAL_GetTick();
+			pack1.time_ms = HAL_GetTick();
 			pack1.num += 1;
 			pack3.num += 1;
 			pack1.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
-			pack3.time_s = HAL_GetTick();
+			pack3.time_ms = HAL_GetTick();
 			pack3.crc = Crc16((uint8_t *)&pack3, sizeof(pack3) - 2);// <<------pack
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack1, sizeof(pack1), false);//32
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
@@ -517,11 +460,11 @@ int app_main(){
 			}
 			break;
 		case STATE_GEN_PACK_2_4:
-			pack2.time_s = HAL_GetTick();
+			pack2.time_ms = HAL_GetTick();
 			pack2.num += 1;
 			pack4.num += 1;
 			pack2.crc = Crc16((uint8_t *)&pack2, sizeof(pack2) - 2);
-			pack4.time_s = HAL_GetTick();
+			pack4.time_ms = HAL_GetTick();
 			pack4.crc = Crc16((uint8_t *)&pack4, sizeof(pack4) - 2);
 			bb_write(alpha_addr, (uint8_t *)&pack2, sizeof(pack2));
 			bb_write(alpha_addr, (uint8_t *)&pack4, sizeof(pack4));

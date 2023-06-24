@@ -77,7 +77,7 @@ typedef struct
 {
 	uint8_t flag;
 	uint16_t num;
-	uint16_t time_s;
+	uint32_t time_ms;
 	float lat;
 	float lon;
 	float alt;
@@ -222,8 +222,8 @@ int app_main(){
 	nrf24_mode_power_down(&nrf24);
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
-	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
-	nrf_config.rf_channel = 77;
+	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
+	nrf_config.rf_channel = 35;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
@@ -234,19 +234,19 @@ int app_main(){
 	nrf_protocol_config.auto_retransmit_count = 0;
 	nrf_protocol_config.auto_retransmit_delay = 0;
 	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, 0xE7E7E7E7E7);
+	nrf24_pipe_set_tx_addr(&nrf24, 0x133456789a);//0xafafafafaf);//
 
 	nrf24_pipe_config_t pipe_config;
 	for (int i = 1; i < 6; i++)
 	{
-		pipe_config.address = 0x123456789a;
+		pipe_config.address = 0xe7e7e7e7e7;
 		pipe_config.address = (pipe_config.address & ~((uint64_t)0xff << 32)) | ((uint64_t)(i + 7) << 32);
 		pipe_config.enable_auto_ack = false;
 		pipe_config.payload_size = -1;
 		nrf24_pipe_rx_start(&nrf24, i, &pipe_config);
 	}
 
-	pipe_config.address = 0x123456789a;
+	pipe_config.address = 0xe7e7e7e7e7;
 	pipe_config.enable_auto_ack = false;
 	pipe_config.payload_size = -1;
 	nrf24_pipe_rx_start(&nrf24, 0, &pipe_config);
@@ -469,11 +469,12 @@ int app_main(){
 
 				}
 			}
+		HAL_Delay(1000);
 
 
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
-				nrf_pack.time_s = HAL_GetTick();
+				nrf_pack.time_ms = HAL_GetTick();
 				nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 				nrf_pack.num++;
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
@@ -483,7 +484,7 @@ int app_main(){
 			if (HAL_GetTick()-start_time_nrf >= 100)
 			{
 				nrf24_fifo_flush_tx(&nrf24);
-				nrf_pack.time_s = HAL_GetTick();
+				nrf_pack.time_ms = HAL_GetTick();
 				nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 				nrf_pack.num++;
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);

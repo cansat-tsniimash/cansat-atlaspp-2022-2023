@@ -50,7 +50,7 @@ typedef enum
 	    CMD_Settings = 0x43
 	}cmd_t;
 
-uint8_t buf[32];
+uint8_t buf[32] = {0x12, 0x34, 0x56};
 
 typedef struct
 {
@@ -190,8 +190,8 @@ int app_main(){
 	nrf24_mode_power_down(&nrf24);
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
-	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
-	nrf_config.rf_channel = 77;
+	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
+	nrf_config.rf_channel = 40;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
@@ -202,7 +202,7 @@ int app_main(){
 	nrf_protocol_config.auto_retransmit_count = 0;
 	nrf_protocol_config.auto_retransmit_delay = 0;
 	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, 0xafafafafaf);
+	nrf24_pipe_set_tx_addr(&nrf24, 0x143456789a);
 
 	nrf24_pipe_config_t pipe_config;
 	for (int i = 1; i < 6; i++)
@@ -391,7 +391,7 @@ int app_main(){
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL)
 		{
-			if (HAL_GetTick() - time_nrf >= 100){
+			if (HAL_GetTick() - time_nrf >= 1){
 				nrf24_fifo_write(&nrf24, (uint8_t *)buf, sizeof(buf), false);
 				time_nrf = HAL_GetTick();
 			}
