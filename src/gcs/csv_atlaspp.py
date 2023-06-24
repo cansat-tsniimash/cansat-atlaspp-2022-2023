@@ -55,10 +55,10 @@ def read_packet(stream):
 
 
 class OrientParser:
-	pack_len = 31
+	pack_len = 21
 	def __init__(self):
 		self.csv_orient = open(CSV_ORIENT_FILEPATH, "w")
-		line_name = '%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s' % ("flag", "num" , "time_s" ,"acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z", "mag_x", "mag_y", "mag_z", "bmp_temp" , "bmp_press" , "crc")
+		line_name = '%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;' % ("flag", "num" , "time_s" ,"acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z", "mag_x", "mag_y", "mag_z", "crc")
 		print(line_name, file = self.csv_orient)
 
 	def parse(self, data: bytes):
@@ -76,41 +76,41 @@ class OrientParser:
 		mag_x = unpacked[9] / 1000
 		mag_y = unpacked[10] / 1000
 		mag_z = unpacked[11] / 1000
-		bmp_temp = unpacked[12] / 100
-		bmp_press = unpacked[13]
 		
 		crc = unpacked[14]
 
 		if (crc != crc16(data, length=(self.pack_len-2))):
 			return -1
 
-		line_orient = "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s" % (flag, num, time_s ,acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z, bmp_temp , bmp_press , crc) 
+		line_orient = "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s" % (flag, num, time_s ,acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z, crc)
 		print(line_orient, file = self.csv_orient)
 		print(line_orient)
 		return 0
 		
 
 class StatePhotorez:
-	pack_len = 11
+	pack_len = 19
 	def __init__(self):
 		self.csv_bme = open(CSV_STATEPHOTOREZ_FILEPATH, "w")
-		line_name = "%s;%s;%s;%s;%s;%s" % ("flag", "num" , "time_s" , "photorez", "status", "crc")
+		line_name = "%s;%s;%s;%s;%s;%s" % ("flag", "num" , "time_s" , "photorez", "", "bmp_pres", "status", "crc")
 		print(line_name, file = self.csv_bme)
 	def parse(self, data: bytes):
-		unpacked = struct.unpack("<B5H", data[:self.pack_len])
+		unpacked = struct.unpack("<BHIHI3H", data[:self.pack_len])
 
 		flag = unpacked[0]		
 		num = unpacked[1]
 		time_s = unpacked[2]
-		photorez = unpacked[3]
-		status = unpacked[4]
-		crc = unpacked[5]
+		photorez = unpacked[5]
+		bmp_temp = unpacked[3]
+		bmp_pres = unpacked[4]
+		status = unpacked[6]
+		crc = unpacked[7]
 
 		if (crc != crc16(data, length=(self.pack_len-2))):
 			return -1
 
 
-		line_bme280 = "%s;%s;%s;%s;%s;%s" % (flag, num, time_s, photorez, status, crc)
+		line_bme280 = "%s;%s;%s;%s;%s;%s;%s;%s" % (flag, num, time_s, photorez, bmp_temp, bmp_pres ,status, crc)
 		print(line_bme280, file = self.csv_bme)
 		print(line_bme280)
 		return 0
