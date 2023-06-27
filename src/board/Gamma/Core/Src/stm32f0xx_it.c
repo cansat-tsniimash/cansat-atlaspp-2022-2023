@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f0xx_it.h"
+#include "its-i2c-link.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -160,7 +161,7 @@ void DMA1_Channel2_3_IRQHandler(void)
 void I2C1_IRQHandler(void)
 {
   /* USER CODE BEGIN I2C1_IRQn 0 */
-
+	its_i2c_link_it_handler();
   /* USER CODE END I2C1_IRQn 0 */
 
   /* USER CODE BEGIN I2C1_IRQn 1 */

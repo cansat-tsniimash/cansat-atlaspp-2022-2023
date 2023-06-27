@@ -13,12 +13,12 @@
 #define I2C_LINK_IRQ_PRIORITY 1
 
 //! Размер пакета передаваемого/принимаемого за одну транзакцию
-#define I2C_LINK_MAX_PACKET_SIZE (38)
+#define I2C_LINK_MAX_PACKET_SIZE (40)
 
 //! Количество приёмных буферов (каждый по I2C_LINK_PACKET_SIZE байт)
 #define I2C_LINK_RXBUF_COUNT (2)
 //! Количество отправных буферов (каждый по I2C_LINK_PACKET_SIZE байт)
-#define I2C_LINK_TXBUF_COUNT (2)
+#define I2C_LINK_TXBUF_COUNT (1)
 
 //! LL i2c-handle (I2C_Typedef)
 #define I2C_LINK_BUS_HANDLE (I2C1)

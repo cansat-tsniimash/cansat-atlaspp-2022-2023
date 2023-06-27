@@ -183,18 +183,6 @@ int app_main(){
 	buzzer_control(&shift_reg, false);
 	shift_reg_oe(&shift_reg, false);
 
-
-
-
-
-	gps_init();
-
-	int64_t cookie;
-	float lat;
-	float lon;
-	float alt;
-	int fix;
-
 	bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
 	mx25_data_pins.this = &shift_reg;
@@ -269,20 +257,15 @@ int app_main(){
 	nrf24_mode_tx(&nrf24);
 
 
-
-	int nrf_irq;
 	uint32_t start_time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
-
-	uint8_t Data[3];
 	int fix_;
-	//int64_t cookie;
+	int64_t cookie;
 	uint64_t time_s_;
 	uint32_t time_us_;
-	//float lat;
-	//float lon;
-	//float alt;
-	//cmd_pack_t pack;
+	float lat;
+	float lon;
+	float alt;
 
 	gps_init();
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
@@ -303,6 +286,7 @@ int app_main(){
 	int check_i = 0;
 
 	while(1){
+
 		if (a > period)
 		{
 			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
@@ -320,6 +304,7 @@ int app_main(){
 			}
 
 		}
+		HAL_Delay(1);
 		a++;
 
 		gps_work();
@@ -468,8 +453,7 @@ int app_main(){
 					break;
 
 				}
-			}
-		HAL_Delay(1000);
+		}
 
 
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
