@@ -13,8 +13,8 @@ from RF24 import RF24_CRC_8
 from RF24 import RF24_CRC_16
 
 
-radio2=RF24_CLASS(24, 1)
-#radio2=RF24_CLASS(22, 0)
+#radio2=RF24_CLASS(24, 1)
+radio2=RF24_CLASS(22, 0)
 
 
 def generate_logfile_name():
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     radio2.setCRCLength(RF24_CRC_8)
     radio2.setAddressWidth(5)
-    radio2.channel = 11
+    radio2.channel = 30
     radio2.setDataRate(RF24_250KBPS)
     radio2.setAutoAck(True)
 
@@ -47,9 +47,10 @@ if __name__ == '__main__':
         radio2.enableDynamicPayloads()
 
     #radio2.disableAckPayload()
- 
+    #radio2.setCRCLength(RF24_CRC_DISABLED)
     radio2.startListening()
     radio2.printDetails()
+    #radio2.setCRCLength(RF24_CRC_DISABLED)
 
     filename = generate_logfile_name()
     f = open(filename, 'wb')
@@ -67,7 +68,7 @@ if __name__ == '__main__':
                 payload_size = radio2.getDynamicPayloadSize()
 
             data = radio2.read(payload_size)
-            print('got data %s' % data)
+            #print('got data %s' % data)
             packet = data
             packet_size = len(packet)
             biter = struct.pack("<B", packet_size)
@@ -80,17 +81,15 @@ if __name__ == '__main__':
             try:
                 if data[0] == 0x21:
                     print("==== PACKET ORIENT & BMP ====")#ОК
-                    unpack_data = struct.unpack("<B2H9hHIH", data[:31])
+                    unpack_data = struct.unpack("<BHI9hH", data[:27])
                     print(unpack_data)
                     print ("Time:", unpack_data[2])
                     print ("Number:", unpack_data[1])
 
-                    print ("Gyro:", unpack_data[6:9])
-                    print ("Acceler:", unpack_data[3:6])
-                    print ("Mag:", unpack_data[9:12])
-                    print ("Temperature BMP:", unpack_data[12])
-                    print ("Pressure BMP:", unpack_data[13],'\n\n\n')
-                    
+                    print ("Gyro:", [x / 1000 for x in unpack_data[6:9]])
+                    print ("Acceler:", [x / 1000 for x in unpack_data[3:6]])
+                    print ("Mag:", [x / 1000 for x in unpack_data[9:12]])
+
                     #summ[0] += ([x/1000 for x in unpack_data[9:12]])[0]
                     #summ[1] += ([x/1000 for x in unpack_data[9:12]])[1]
                     #summ[2] += ([x/1000 for x in unpack_data[9:12]])[2]
@@ -98,16 +97,39 @@ if __name__ == '__main__':
                     #print([x/count for x in summ])
                 elif data[0] == 0x20:
                     print("==== LUX & STATE ====")
-                    unpack_data = struct.unpack("<B5H", data[:11])
+                    unpack_data = struct.unpack("<BHIHI3H", data[:19])
                     print ("Time:", unpack_data[2])
                     print ("Number:", unpack_data[1])
+                    print ("Temperature BMP:", unpack_data[3] / 100)
+                    print ("Pressure BMP:", unpack_data[4])
+                    print ("Lux:", unpack_data[5])
+                    print ("State:", unpack_data[6])
+                    print ("State now: ", (unpack_data[6] >> 0) & 0x03)
+                    print ("Radio IRQ", unpack_data[6] >> 13)
 
-                    print ("Lux:", unpack_data[3])
-                    print ("State:", unpack_data[4],'\n\n\n')
-                    
-                  
+                    if not (unpack_data[6] >> 2) & 0x07):
+                        print ("АЛЬФА - CONNECT")
+                    else:
+                        print ("АЛЬФА - DISCONNECT")
+
+                    if not (unpack_data[6] >> 5) & 0x07):
+                        print ("БЕТА - CONNECT")
+                    else:
+                        print ("БЕТА - DISCONNECT")
+
+                    if not (unpack_data[6] >> 8) & 0x07):
+                        print ("ГАММА - CONNECT")
+                    else:
+                        print ("ГАММА - DISCONNECT")
+
+                    if not (unpack_data[6] >> 11) & 0x01):
+                        print ("MOUNT - SD Ready")
+                    else:
+                        print ("MOUNT - SD not Ready :/")
+
+
                 elif data[0] == 0x06:
-                    unpack_data = struct.unpack("<B2Hh3fbH", data[:22])
+                    unpack_data = struct.unpack("<BHIh3fbH", data[:24])
                     print("==== GPS ====")
 
                     print ("Time:", unpack_data[2])
@@ -117,17 +139,17 @@ if __name__ == '__main__':
                     print ("Latitude:", unpack_data[4])
                     print ("Lontitude:", unpack_data[5])
                     print ("Altitude:", unpack_data[6])
-                    print ("FIX GPS:", unpack_data[7],'\n\n\n')
+                    print ("FIX GPS:", unpack_data[7])
 
                 elif data[0] == 0x08:
-                    unpack_data = struct.unpack("<B2H2IH", data[:15])
+                    unpack_data = struct.unpack("<BHI2IH", data[:17])
                     print("==== PACKET TIME ====")
                     print ("Time:", unpack_data[2])
                     print ("Number:", unpack_data[1])
 
                     print ("GPS_time_S:", unpack_data[3])
-                    print ("GPS_time_US:", unpack_data[4],'\n\n\n')
-                    
+                    print ("GPS_time_US:", unpack_data[4])
+
                 else:
                     print('got data %s' % data)
             except Exception as e:
@@ -140,4 +162,4 @@ if __name__ == '__main__':
         else:
             #print('got no data')
             pass
-        time.sleep(0.1)
+        time.sleep(0.001)
