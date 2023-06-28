@@ -351,8 +351,19 @@ int app_main(){
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						addr_write = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						mx25l512_PP_up(&bus_data, &addr_write, pack.data + 4, pack.size - 4, 10);//Записываю данные
+						uint8_t size = pack.size;
+						uint32_t new_addr = addr_write + size;
+						if(new_addr < 0xffff){
+							if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+							{
+								addr_write = new_addr & (0x0f << 12);
+								new_addr = addr_write + size;
+							}
+							mx25l512_PP_up(&bus, &addr_write, pack.data, pack.size, 10);//Записываю данные
+							addr_write = new_addr;
+							pack.size = size;
+							its_i2c_link_write(&pack, sizeof(pack));
+						}
 					}
 					break;
 				case CMD_Read:
@@ -373,18 +384,18 @@ int app_main(){
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						uint8_t size = pack.data[0];
-						uint32_t new_addr = addr + (size << 4);
-						if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-						{
-							addr_read = new_addr & (0x0f << 12);
-							new_addr = addr_read + (sizeof(pack) << 4);
+						uint32_t new_addr = addr_read + size;
+						if(new_addr < 0xffff){
+							if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+							{
+								addr_read = new_addr & (0x0f << 12);
+								new_addr = addr_read + size;
+							}
+							mx25l512_read(&bus_data, &addr_read, pack.data, size);
+							addr_read = new_addr;
+							pack.size = size;
+							its_i2c_link_write(&pack, sizeof(pack));
 						}
-						mx25l512_read(&bus_data, &addr_read, pack.data, size);
-						for (int i = 0; i < size; i++)
-							pack.data[i] = i + 40;
-						addr_read = new_addr;
-						pack.size = size;
-						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;
 				case CMD_OFF:
@@ -397,11 +408,9 @@ int app_main(){
 					if (pack.size == 2)
 					{
 						uint16_t num = *((uint16_t *)pack.data);
-						uint32_t addr = (num % 9* 28) << 4 | (num / 9) << 12;
-						mx25l512_read(&bus_gps, &addr, pack.data + 2, 28);
-						pack.size = 28 + 2;
-						for (int i = 0; i < 28; i++)
-							pack.data[i] = 0xab;
+						uint32_t addr = ((num % 136)* 30) | (num / 136) << 12;
+						mx25l512_read(&bus_gps, &addr, pack.data + 2, 30);
+						pack.size = 30 + 2;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;

@@ -182,15 +182,17 @@ int app_main(){
 					{
 						uint8_t size = pack.size;
 						uint32_t new_addr = addr_write + size;
-						if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-						{
-							addr_write = new_addr & (0x0f << 12);
-							new_addr = addr_write + size;
+						if(new_addr < 0xffff){
+							if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+							{
+								addr_write = new_addr & (0x0f << 12);
+								new_addr = addr_write + size;
+							}
+							mx25l512_PP_up(&bus, &addr_write, pack.data, pack.size, 10);//Записываю данные
+							addr_write = new_addr;
+							pack.size = size;
+							its_i2c_link_write(&pack, sizeof(pack));
 						}
-						mx25l512_PP_up(&bus, &addr_write, pack.data + 4, pack.size - 4, 10);//Записываю данные
-						addr_write = new_addr;
-						pack.size = size;
-						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;
 				case CMD_Read:
@@ -199,7 +201,7 @@ int app_main(){
 						addr_read = 0x0000;
 						uint8_t size = pack.data[0];
 						mx25l512_read(&bus, &addr_read, pack.data, size);
-						addr_read = size << 4;
+						addr_read = size;
 						pack.size = size;
 						its_i2c_link_write(&pack, sizeof(pack));
 
@@ -210,15 +212,17 @@ int app_main(){
 					{
 						uint8_t size = pack.data[0];
 						uint32_t new_addr = addr_read + size;
-						if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-						{
-							addr_read = new_addr & (0x0f << 12);
-							new_addr = addr_read + size;
+						if(new_addr < 0xffff){
+							if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+							{
+								addr_read = new_addr & (0x0f << 12);
+								new_addr = addr_read + size;
+							}
+							mx25l512_read(&bus, &addr_read, pack.data, size);
+							addr_read = new_addr;
+							pack.size = size;
+							its_i2c_link_write(&pack, sizeof(pack));
 						}
-						mx25l512_read(&bus, &addr_read, pack.data, size);
-						addr_read = new_addr;
-						pack.size = size;
-						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;
 				case CMD_OFF:
