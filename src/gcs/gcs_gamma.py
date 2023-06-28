@@ -41,7 +41,7 @@ def generate_logfile_name():
     isostring = now.isoformat()  # string 2021-04-27T23:17:31
     isostring = isostring.replace("-", "")  # string 20210427T23:17:31
     isostring = isostring.replace(":", "")  # string 20210427T231731, oi ?oi iaai
-    return "log/BETA_gcs-" + isostring + ".bin"
+    return "log/GAMMA_gcs-" + isostring + ".bin"
 
 gyro_calib = [0.5174269005847948, -3.421812865497076, -0.24684210526315856]
 
@@ -50,11 +50,11 @@ if __name__ == '__main__':
 
     radio2.begin()
 
-    radio2.openReadingPipe(1, b'\x9a\x78\x56\x34\x13') #b'\xaf\xaf\xaf\xaf\xaf')
+    radio2.openReadingPipe(1, b'\x9a\x78\x56\x34\x14') #b'\xaf\xaf\xaf\xaf\xaf')
 
     radio2.setCRCLength(RF24_CRC_8)
     radio2.setAddressWidth(5)
-    radio2.channel = 35
+    radio2.channel = 40
     radio2.setDataRate(RF24_250KBPS)
     radio2.setAutoAck(True)
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     radio2.enableAckPayload()
     radio2.enableDynamicAck()
     radio2.setCRCLength(RF24_CRC_DISABLED)
- 
+
     radio2.startListening()
     radio2.printDetails()
 
@@ -98,25 +98,26 @@ if __name__ == '__main__':
             f.write(record)
             f.flush()
 
-            try:
-                if data[0] == 0x0f:
 
-                    print("+++++++++++++++BETA+++++++++++++++")#ОК
-                    unpack_data = struct.unpack("<BHI3f2IbH", data[:30])
-                    print(unpack_data)
-                    print ("num:", unpack_data[1])
-                    print ("time_s:", unpack_data[2])
-                    print ("latitude:", unpack_data[3])
-                    print ("lontitude:", unpack_data[4])
-                    print ("altitude:", unpack_data[5])
-                    print ("gps_time_s:", unpack_data[6])
-                    print ("gps_time_us:", unpack_data[7])
-                    print ("FIX:", unpack_data[8])
-                   
-                else:
-                    pass#print('got data %s' % data)
-            except Exception as e:
-                print(e)
+           # try:
+                #if data[0] == 0x0f:
+
+                    #print("+++++++++++++++GAMMA+++++++++++++++")#ОК
+                    #unpack_data = struct.unpack("<BHI3f2IbH", data[:30])
+                    #print(unpack_data)
+                    #print ("num:", unpack_data[1])
+                    #print ("time_s:", unpack_data[2])
+                    #print ("latitude:", unpack_data[3])
+                    #print ("lontitude:", unpack_data[4])
+                    #print ("altitude:", unpack_data[5])
+                    #print ("gps_time_s:", unpack_data[6])
+                    #print ("gps_time_us:", unpack_data[7])
+                    #print ("FIX:", unpack_data[8])
+
+                    #pass
+            print('got data %s' % data)
+            #except Exception as e:
+                #print(e)
             #print(data)
             #print(data[0])
             fraw.write(data)

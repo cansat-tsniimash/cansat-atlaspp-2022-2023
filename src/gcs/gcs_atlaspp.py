@@ -47,7 +47,6 @@ if __name__ == '__main__':
         radio2.enableDynamicPayloads()
 
     #radio2.disableAckPayload()
-    #radio2.setCRCLength(RF24_CRC_DISABLED)
     radio2.startListening()
     radio2.printDetails()
     #radio2.setCRCLength(RF24_CRC_DISABLED)
@@ -107,22 +106,22 @@ if __name__ == '__main__':
                     print ("State now: ", (unpack_data[6] >> 0) & 0x03)
                     print ("Radio IRQ", unpack_data[6] >> 13)
 
-                    if not (unpack_data[6] >> 2) & 0x07):
+                    if not (unpack_data[6] >> 2) & 0x07:
                         print ("АЛЬФА - CONNECT")
                     else:
                         print ("АЛЬФА - DISCONNECT")
 
-                    if not (unpack_data[6] >> 5) & 0x07):
+                    if not (unpack_data[6] >> 5) & 0x07:
                         print ("БЕТА - CONNECT")
                     else:
                         print ("БЕТА - DISCONNECT")
 
-                    if not (unpack_data[6] >> 8) & 0x07):
+                    if not (unpack_data[6] >> 8) & 0x07:
                         print ("ГАММА - CONNECT")
                     else:
                         print ("ГАММА - DISCONNECT")
 
-                    if not (unpack_data[6] >> 11) & 0x01):
+                    if not (unpack_data[6] >> 11) & 0x01:
                         print ("MOUNT - SD Ready")
                     else:
                         print ("MOUNT - SD not Ready :/")

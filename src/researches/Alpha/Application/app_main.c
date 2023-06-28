@@ -77,36 +77,81 @@ void buzzer_control(bool onoff){
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
 }
 
+typedef enum
+{
+	SYS_TEST_MEM_DATA = (1 << 0),
+	SYS_TEST_NRF24 = (1 << 1),
+	SYS_TEST_MEM_GPS = (1 << 2)
+} sys_check_t;
+
+int all_systems_check(bus_t *bus_data, int comp)
+{
+	int ret = 0;
+	if (comp & SYS_TEST_MEM_DATA)
+	{
+		uint8_t id[3] = {0};
+		mx25l512_rdid(bus_data, id);
+		if ((id[0] == 0xc2) && (id[1] == 0x20) && (id[2] == 0x10))
+			ret |= SYS_TEST_MEM_DATA;
+	}
+	return ret;
+}
+
 int app_main(){
 	on_bb();
+
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
-
 	its_i2c_link_start();
-
 	cmd_pack_t pack;
 
-	uint32_t addr_read;
+	uint32_t addr_read = 0;
+	uint32_t addr_write = 0;
+
 	bus_t bus;
 	mx25l512_spi_pins_t mx25_pins;
 	mx25_pins.cs_port = GPIOB;
 	mx25_pins.cs_pin = GPIO_PIN_1;
 	mx25l512_spi_init(&bus, &hspi1, &mx25_pins);
 
+	volatile int check = all_systems_check(&bus,  SYS_TEST_MEM_DATA);
+	buzzer_control(true);
+	HAL_Delay(500);
+	buzzer_control(false);
+	HAL_Delay(300);
+	for (int i = 0; i < check; i++)
+	{
+		buzzer_control(true);
+		HAL_Delay(300);
+		buzzer_control(false);
+		HAL_Delay(300);
+	}
+
 	uint16_t a = 0;
-
-	uint8_t data3[3] = {0};
-
+	uint16_t period = 200;
+	int check_i = 0;
 
 	while(1){
-		mx25l512_rdid(&bus, data3);
-		if (a >= 200)
+		if (a > period)
 		{
 			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 			a = 0;
+
+			if (check_i == check * 2)
+			{
+				period = 1500;
+				check_i = 0;
+			}
+			else
+			{
+				period = 200;
+				check_i++;
+			}
+
 		}
 		a++;
 		HAL_Delay(1);
+
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 		if (rc > 0)
 		{
@@ -135,8 +180,17 @@ int app_main(){
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						uint32_t addr_write = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						uint8_t size = pack.size;
+						uint32_t new_addr = addr_write + size;
+						if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+						{
+							addr_write = new_addr & (0x0f << 12);
+							new_addr = addr_write + size;
+						}
 						mx25l512_PP_up(&bus, &addr_write, pack.data + 4, pack.size - 4, 10);//Записываю данные
+						addr_write = new_addr;
+						pack.size = size;
+						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;
 				case CMD_Read:
@@ -155,11 +209,11 @@ int app_main(){
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						uint8_t size = pack.data[0];
-						uint32_t new_addr = addr_read + (size << 4);
+						uint32_t new_addr = addr_read + size;
 						if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
 						{
 							addr_read = new_addr & (0x0f << 12);
-							new_addr = addr_read + (sizeof(pack) << 4);
+							new_addr = addr_read + size;
 						}
 						mx25l512_read(&bus, &addr_read, pack.data, size);
 						addr_read = new_addr;

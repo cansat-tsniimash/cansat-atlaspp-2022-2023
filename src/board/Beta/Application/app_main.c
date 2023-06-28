@@ -77,7 +77,7 @@ typedef struct
 {
 	uint8_t flag;
 	uint16_t num;
-	uint16_t time_s;
+	uint32_t time_ms;
 	float lat;
 	float lon;
 	float alt;
@@ -118,6 +118,45 @@ void buzzer_control(shift_reg_t *shift_reg, bool onoff){
 	shift_reg_write_bit_8(shift_reg, 3, onoff);
 }
 
+typedef enum
+{
+	SYS_TEST_MEM_DATA = (1 << 0),
+	SYS_TEST_NRF24 = (1 << 1),
+	SYS_TEST_MEM_GPS = (1 << 2)
+} sys_check_t;
+
+int all_systems_check(nrf24_lower_api_config_t *nrf24, bus_t *bus_data, bus_t *bus_gps, int comp)
+{
+	int ret = 0;
+
+	if (comp & SYS_TEST_NRF24)
+	{
+		int irq;
+		nrf24_fifo_status_t rx_status;
+		nrf24_fifo_status_t tx_status;
+		nrf24_fifo_flush_tx(nrf24);
+		nrf24_fifo_flush_rx(nrf24);
+		nrf24_fifo_status(nrf24, &rx_status, &tx_status);
+		nrf24_irq_get(nrf24, &irq);
+		if ((irq < 6) && (rx_status == NRF24_FIFO_EMPTY) && (tx_status == NRF24_FIFO_EMPTY))
+			ret |= SYS_TEST_NRF24;
+	}
+	if (comp & SYS_TEST_MEM_DATA)
+	{
+		uint8_t id[3] = {0};
+		mx25l512_rdid(bus_data, id);
+		if ((id[0] == 0xc2) && (id[1] == 0x20) && (id[2] == 0x10))
+			ret |= SYS_TEST_MEM_DATA;
+	}
+	if (comp & SYS_TEST_MEM_GPS)
+	{
+		uint8_t id[3] = {0};
+		mx25l512_rdid(bus_gps, id);
+		if ((id[0] == 0xc2) && (id[1] == 0x20) && (id[2] == 0x10))
+			ret |= SYS_TEST_MEM_GPS;
+	}
+	return ret;
+}
 
 int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
@@ -144,18 +183,6 @@ int app_main(){
 	buzzer_control(&shift_reg, false);
 	shift_reg_oe(&shift_reg, false);
 
-
-
-
-
-	gps_init();
-
-	int64_t cookie;
-	float lat;
-	float lon;
-	float alt;
-	int fix;
-
 	bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
 	mx25_data_pins.this = &shift_reg;
@@ -171,42 +198,7 @@ int app_main(){
 	uint8_t byte_w = 0x4A;
 	uint32_t addr = 8;
 	uint8_t stat_reg = 0;
-	uint8_t data3[3] = {0 };
-
-	while(1)
-	{
-		break;
-		buzzer_control(&shift_reg, true);
-		HAL_Delay(100);
-		buzzer_control(&shift_reg, false);
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-		//uint8_t byte = 0;
-		//volatile HAL_StatusTypeDef re = HAL_UART_Receive(&huart2, &byte, 1, 1000);
-		//gps_push_byte(byte);
-		//gps_work();
-		//gps_get_coords(&cookie, &lat, &lon, &alt, &fix);
-
-		mx25l512_CE_up(&bus_data, 1000);
-		HAL_Delay(42);
-		mx25l512_RES(&bus_data, &byte_r);
-		mx25l512_rdsr(&bus_data, &stat_reg);
-		mx25l512_read(&bus_data, &addr, &byte_r, 1);//читаю данные
-		mx25l512_PP_up(&bus_data, &addr, &byte_w, 1, 1000);
-		HAL_Delay(42);
-		mx25l512_read(&bus_data, &addr, &byte_r, 1);//читаю данные
-		byte_r = 0;
-
-		mx25l512_CE_up(&bus_gps, 1000);
-		HAL_Delay(42);
-		mx25l512_RES(&bus_gps, &byte_r);
-		mx25l512_rdsr(&bus_gps, &stat_reg);
-		mx25l512_read(&bus_gps, &addr, &byte_r, 1);//читаю данные
-		mx25l512_PP_up(&bus_gps, &addr, &byte_w, 1, 1000);
-		HAL_Delay(42);
-		mx25l512_read(&bus_gps, &addr, &byte_r, 1);//читаю данные
-		byte_r = 0;
-
-	}
+	uint8_t data3[3] = {0};
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
@@ -219,7 +211,7 @@ int app_main(){
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
 	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
-	nrf_config.rf_channel = 77;
+	nrf_config.rf_channel = 35;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
@@ -230,41 +222,50 @@ int app_main(){
 	nrf_protocol_config.auto_retransmit_count = 0;
 	nrf_protocol_config.auto_retransmit_delay = 0;
 	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, 0xE7E7E7E7E7);
+	nrf24_pipe_set_tx_addr(&nrf24, 0x133456789a);//0xafafafafaf);//
 
 	nrf24_pipe_config_t pipe_config;
 	for (int i = 1; i < 6; i++)
 	{
-		pipe_config.address = 0x123456789a;
+		pipe_config.address = 0xe7e7e7e7e7;
 		pipe_config.address = (pipe_config.address & ~((uint64_t)0xff << 32)) | ((uint64_t)(i + 7) << 32);
 		pipe_config.enable_auto_ack = false;
 		pipe_config.payload_size = -1;
 		nrf24_pipe_rx_start(&nrf24, i, &pipe_config);
 	}
 
-	pipe_config.address = 0x123456789a;
+	pipe_config.address = 0xe7e7e7e7e7;
 	pipe_config.enable_auto_ack = false;
 	pipe_config.payload_size = -1;
 	nrf24_pipe_rx_start(&nrf24, 0, &pipe_config);
+
+	volatile int check = all_systems_check(&nrf24, &bus_data, &bus_gps, SYS_TEST_NRF24 | SYS_TEST_MEM_DATA | SYS_TEST_MEM_GPS);
+
+	buzzer_control(&shift_reg, true);
+	HAL_Delay(500);
+	buzzer_control(&shift_reg, false);
+	HAL_Delay(300);
+	for (int i = 0; i < check; i++)
+	{
+		buzzer_control(&shift_reg, true);
+		HAL_Delay(300);
+		buzzer_control(&shift_reg, false);
+		HAL_Delay(300);
+	}
 
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
 
 
-
-	int nrf_irq;
 	uint32_t start_time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
-
-	uint8_t Data[3];
 	int fix_;
-	//int64_t cookie;
+	int64_t cookie;
 	uint64_t time_s_;
 	uint32_t time_us_;
-	//float lat;
-	//float lon;
-	//float alt;
-	//cmd_pack_t pack;
+	float lat;
+	float lon;
+	float alt;
 
 	gps_init();
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
@@ -280,12 +281,35 @@ int app_main(){
     uint32_t addr_read = 0;
     uint32_t addr_write = 0;
 
+	uint16_t a = 0;
+	uint16_t period = 200;
+	int check_i = 0;
+
 	while(1){
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+
+		if (a > period)
+		{
+			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+			a = 0;
+
+			if (check_i == check * 2)
+			{
+				period = 2000;
+				check_i = 0;
+			}
+			else
+			{
+				period = 300;
+				check_i++;
+			}
+
+		}
+		HAL_Delay(1);
+		a++;
 
 		gps_work();
 		gps_get_coords(&cookie, &lat, &lon, &alt, &fix_);
-		gps_get_time(&cookie, &time_s_, &time_us_);
+ 		gps_get_time(&cookie, &time_s_, &time_us_);
  		nrf_pack.lat = lat;
 		nrf_pack.lon = lon;
 		nrf_pack.alt = alt;
@@ -429,12 +453,12 @@ int app_main(){
 					break;
 
 				}
-			}
+		}
 
 
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
-				nrf_pack.time_s = HAL_GetTick();
+				nrf_pack.time_ms = HAL_GetTick();
 				nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 				nrf_pack.num++;
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
@@ -444,7 +468,7 @@ int app_main(){
 			if (HAL_GetTick()-start_time_nrf >= 100)
 			{
 				nrf24_fifo_flush_tx(&nrf24);
-				nrf_pack.time_s = HAL_GetTick();
+				nrf_pack.time_ms = HAL_GetTick();
 				nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 				nrf_pack.num++;
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);

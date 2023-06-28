@@ -159,7 +159,7 @@ static void MX_I2C1_Init(void)
 {
 
   /* USER CODE BEGIN I2C1_Init 0 */
-
+	return;
   /* USER CODE END I2C1_Init 0 */
 
   LL_I2C_InitTypeDef I2C_InitStruct = {0};

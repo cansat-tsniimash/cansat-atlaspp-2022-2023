@@ -50,7 +50,7 @@ typedef enum
 	    CMD_Settings = 0x43
 	}cmd_t;
 
-uint8_t buf[32];
+uint8_t buf[32] = {0x12, 0x34, 0x56};
 
 typedef struct
 {
@@ -101,6 +101,46 @@ void buzzer_control(shift_reg_t *shift_reg, bool onoff){
 	shift_reg_write_bit_8(shift_reg, 7, onoff);
 }
 
+typedef enum
+{
+	SYS_TEST_MEM_DATA = (1 << 0),
+	SYS_TEST_NRF24 = (1 << 1),
+	SYS_TEST_MEM_GPS = (1 << 2)
+} sys_check_t;
+
+int all_systems_check(nrf24_lower_api_config_t *nrf24, bus_t *bus_data, bus_t *bus_gps, int comp)
+{
+	int ret = 0;
+
+	if (comp & SYS_TEST_NRF24)
+	{
+		int irq;
+		nrf24_fifo_status_t rx_status;
+		nrf24_fifo_status_t tx_status;
+		nrf24_fifo_flush_tx(nrf24);
+		nrf24_fifo_flush_rx(nrf24);
+		nrf24_fifo_status(nrf24, &rx_status, &tx_status);
+		nrf24_irq_get(nrf24, &irq);
+		if ((irq < 6) && (rx_status == NRF24_FIFO_EMPTY) && (tx_status == NRF24_FIFO_EMPTY))
+			ret |= SYS_TEST_NRF24;
+	}
+	if (comp & SYS_TEST_MEM_DATA)
+	{
+		uint8_t id[3] = {0};
+		mx25l512_rdid(bus_data, id);
+		if ((id[0] == 0xc2) && (id[1] == 0x20) && (id[2] == 0x10))
+			ret |= SYS_TEST_MEM_DATA;
+	}
+	if (comp & SYS_TEST_MEM_GPS)
+	{
+		uint8_t id[3] = {0};
+		mx25l512_rdid(bus_gps, id);
+		if ((id[0] == 0xc2) && (id[1] == 0x20) && (id[2] == 0x10))
+			ret |= SYS_TEST_MEM_GPS;
+	}
+	return ret;
+}
+
 int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
@@ -108,7 +148,7 @@ int app_main(){
 	its_i2c_link_start();
 
 //variables
-/*	uint64_t tx_adrr = 0xafafafaf01;
+	uint64_t tx_adrr = 0xafafafaf01;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
 	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
@@ -123,7 +163,9 @@ int app_main(){
 	shift_reg_init(&shift_reg);
 	shift_reg_write_8(&shift_reg, 0xF0);
 	on_bb(&shift_reg);
+	buzzer_control(&shift_reg, false);
 	shift_reg_oe(&shift_reg, false);
+
 
 	bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
@@ -136,30 +178,9 @@ int app_main(){
 	uint8_t byte_w = 74;
 	uint8_t stat_reg = 0;
 
-	uint32_t addr2 = 8;*/
+	uint32_t addr2 = 8;
 
-/*	while(1)
-	{
-		break;
-		buzzer_control(&shift_reg, true);
-		HAL_Delay(100);
-		buzzer_control(&shift_reg, false);
-
-
-		mx25l512_CE_up(&bus_data, 1000);
-		HAL_Delay(42);
-		mx25l512_RES(&bus_data, &byte_r);
-		mx25l512_rdsr(&bus_data, &stat_reg);
-		mx25l512_read(&bus_data, &addr2, &byte_r, 1);//читаю данные
-		mx25l512_PP_up(&bus_data, &addr2, &byte_w, 1, 1000);
-		HAL_Delay(42);
-		mx25l512_read(&bus_data, &addr2, &byte_r, 1);//читаю данные
-		byte_r = 0;
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-		HAL_Delay(100);
-	}*/
-
-/*	nrf24_spi_pins_sr_t nrf_pins;
+	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
 	nrf_pins.pos_CE = 5;
 	nrf_pins.pos_CS = 4;
@@ -170,7 +191,7 @@ int app_main(){
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
 	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
-	nrf_config.rf_channel = 77;
+	nrf_config.rf_channel = 40;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
 	nrf_protocol_config.crc_size = NRF24_CRCSIZE_1BYTE;
@@ -181,7 +202,7 @@ int app_main(){
 	nrf_protocol_config.auto_retransmit_count = 0;
 	nrf_protocol_config.auto_retransmit_delay = 0;
 	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, 0xafafafafaf);
+	nrf24_pipe_set_tx_addr(&nrf24, 0x143456789a);
 
 	nrf24_pipe_config_t pipe_config;
 	for (int i = 1; i < 6; i++)
@@ -198,8 +219,21 @@ int app_main(){
 	pipe_config.payload_size = -1;
 	nrf24_pipe_rx_start(&nrf24, 0, &pipe_config);
 
+	int check = all_systems_check(&nrf24, &bus_data, &bus_data, SYS_TEST_NRF24 | SYS_TEST_MEM_DATA);
+	buzzer_control(&shift_reg, true);
+	HAL_Delay(500);
+	buzzer_control(&shift_reg, false);
+	HAL_Delay(300);
+	for (int i = 0; i < check; i++)
+	{
+		buzzer_control(&shift_reg, true);
+		HAL_Delay(300);
+		buzzer_control(&shift_reg, false);
+		HAL_Delay(300);
+	}
+
 	nrf24_mode_standby(&nrf24);
-	nrf24_mode_tx(&nrf24);*/
+	nrf24_mode_tx(&nrf24);
 
 	uint32_t addr_write = 0;
 	uint32_t addr_read = 0;
@@ -211,11 +245,32 @@ int app_main(){
 	cmd_pack_t pack;
 	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
+	uint16_t a = 0;
+	uint16_t period = 200;
+	int check_i = 0;
+
 	while(1){
-		//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+		if (a > period)
+		{
+			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+			a = 0;
+
+			if (check_i == check * 2)
+			{
+				period = 1000;
+				check_i = 0;
+			}
+			else
+			{
+				period = 150;
+				check_i++;
+			}
+
+		}
+		a++;
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
-/*		if (rc > 0)
+		if (rc > 0)
 		{
 			switch(pack.num){
 				case CMD_BUZ:
@@ -330,13 +385,13 @@ int app_main(){
 					break;
 
 				}
-			}*/
+			}
 
-/*		int comp;
+		int comp;
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL)
 		{
-			if (HAL_GetTick() - time_nrf >= 100){
+			if (HAL_GetTick() - time_nrf >= 1){
 				nrf24_fifo_write(&nrf24, (uint8_t *)buf, sizeof(buf), false);
 				time_nrf = HAL_GetTick();
 			}
@@ -349,7 +404,7 @@ int app_main(){
 			start_time_nrf = HAL_GetTick();
 		}
 		nrf24_irq_get(&nrf24, &comp);
-		nrf24_irq_clear(&nrf24, comp);*/
+		nrf24_irq_clear(&nrf24, comp);
 	}
 
 }
