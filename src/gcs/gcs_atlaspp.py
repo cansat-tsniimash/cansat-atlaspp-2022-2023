@@ -47,9 +47,9 @@ if __name__ == '__main__':
         radio2.enableDynamicPayloads()
 
     #radio2.disableAckPayload()
-
     radio2.startListening()
     radio2.printDetails()
+    #radio2.setCRCLength(RF24_CRC_DISABLED)
 
     filename = generate_logfile_name()
     f = open(filename, 'wb')
@@ -67,7 +67,7 @@ if __name__ == '__main__':
                 payload_size = radio2.getDynamicPayloadSize()
 
             data = radio2.read(payload_size)
-            print('got data %s' % data)
+            #print('got data %s' % data)
             packet = data
             packet_size = len(packet)
             biter = struct.pack("<B", packet_size)
@@ -103,12 +103,29 @@ if __name__ == '__main__':
                     print ("Pressure BMP:", unpack_data[4])
                     print ("Lux:", unpack_data[5])
                     print ("State:", unpack_data[6])
-                    print ("State now: ", unpack_data[6] & 0x03)
+                    print ("State now: ", (unpack_data[6] >> 0) & 0x03)
                     print ("Radio IRQ", unpack_data[6] >> 13)
-                    print ("АЛЬФА CONNECT - ", (unpack_data[6] >> 2) & 0x01)
-                    print ("БЕТА CONNECT - ", (unpack_data[6] >> 3) & 0x01)
-                    print ("ГАММА  CONNECT - ", (unpack_data[6] >> 4) & 0x01)
-                    print ("MOUNT - ", (unpack_data[6] >> 5) & 0x01)
+
+                    if not (unpack_data[6] >> 2) & 0x07:
+                        print ("АЛЬФА - CONNECT")
+                    else:
+                        print ("АЛЬФА - DISCONNECT")
+
+                    if not (unpack_data[6] >> 5) & 0x07:
+                        print ("БЕТА - CONNECT")
+                    else:
+                        print ("БЕТА - DISCONNECT")
+
+                    if not (unpack_data[6] >> 8) & 0x07:
+                        print ("ГАММА - CONNECT")
+                    else:
+                        print ("ГАММА - DISCONNECT")
+
+                    if not (unpack_data[6] >> 11) & 0x01:
+                        print ("MOUNT - SD Ready")
+                    else:
+                        print ("MOUNT - SD not Ready :/")
+
 
                 elif data[0] == 0x06:
                     unpack_data = struct.unpack("<BHIh3fbH", data[:24])
@@ -121,7 +138,7 @@ if __name__ == '__main__':
                     print ("Latitude:", unpack_data[4])
                     print ("Lontitude:", unpack_data[5])
                     print ("Altitude:", unpack_data[6])
-                    print ("FIX GPS:", unpack_data[7],'\n\n\n')
+                    print ("FIX GPS:", unpack_data[7])
 
                 elif data[0] == 0x08:
                     unpack_data = struct.unpack("<BHI2IH", data[:17])
@@ -130,7 +147,7 @@ if __name__ == '__main__':
                     print ("Number:", unpack_data[1])
 
                     print ("GPS_time_S:", unpack_data[3])
-                    print ("GPS_time_US:", unpack_data[4],'\n\n\n')
+                    print ("GPS_time_US:", unpack_data[4])
 
                 else:
                     print('got data %s' % data)
@@ -144,4 +161,4 @@ if __name__ == '__main__':
         else:
             #print('got no data')
             pass
-        time.sleep(0.1)
+        time.sleep(0.001)
