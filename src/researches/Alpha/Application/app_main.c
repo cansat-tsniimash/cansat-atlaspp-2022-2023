@@ -106,6 +106,7 @@ int app_main(){
 	cmd_pack_t pack;
 
 	uint32_t addr_read = 0;
+	uint32_t addr_write = 0;
 
 	bus_t bus;
 	mx25l512_spi_pins_t mx25_pins;
@@ -179,8 +180,17 @@ int app_main(){
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						uint32_t addr_write = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						uint8_t size = pack.size;
+						uint32_t new_addr = addr_write + size;
+						if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+						{
+							addr_write = new_addr & (0x0f << 12);
+							new_addr = addr_write + size;
+						}
 						mx25l512_PP_up(&bus, &addr_write, pack.data + 4, pack.size - 4, 10);//Записываю данные
+						addr_write = new_addr;
+						pack.size = size;
+						its_i2c_link_write(&pack, sizeof(pack));
 					}
 					break;
 				case CMD_Read:
@@ -199,11 +209,11 @@ int app_main(){
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						uint8_t size = pack.data[0];
-						uint32_t new_addr = addr_read + (size << 4);
+						uint32_t new_addr = addr_read + size;
 						if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
 						{
 							addr_read = new_addr & (0x0f << 12);
-							new_addr = addr_read + (sizeof(pack) << 4);
+							new_addr = addr_read + size;
 						}
 						mx25l512_read(&bus, &addr_read, pack.data, size);
 						addr_read = new_addr;

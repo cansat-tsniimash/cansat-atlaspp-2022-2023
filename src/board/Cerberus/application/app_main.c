@@ -22,9 +22,9 @@
 #include <ATGM336H/nmea_gps.h>
 #include <bb.h>
 #include <string.h>
-#define alpha_addr 0x76 << 1
-#define beta_addr 0x77 << 1
-#define gamma_addr 0x78 << 1
+#define alpha_addr 0x42 << 1
+#define beta_addr 0x43 << 1
+#define gamma_addr 0x44 << 1
 #define devider 10
 extern SPI_HandleTypeDef hspi2;
 extern ADC_HandleTypeDef hadc1;
@@ -81,22 +81,22 @@ int app_main(){
 	is_mount = f_mount(&fileSystem, "", 1);
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res1 = f_open(&File1, (char*)path1, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		f_puts("flag; num; time_s; accl1; accl2; accl3; gyro1; gyro2; gyro3; mag1; mag2; mag3; crc\n", &File1);
+		f_puts("flag; num; time_ms; accl1; accl2; accl3; gyro1; gyro2; gyro3; mag1; mag2; mag3; crc\n", &File1);
 		res1 = f_sync(&File1);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res2 = f_open(&File2, (char*)path2, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		f_puts("flag; num; time_s; ds_temp; lat; lon; alt; fix; crc\n", &File2);
+		f_puts("flag; num; time_ms; ds_temp; lat; lon; alt; fix; crc\n", &File2);
 		res2 = f_sync(&File2);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res3 = f_open(&File3, (char*)path3, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		f_puts("flag; num; time_s; bmp_temp; bmp_press; fhotores; status; crc\n", &File3);
+		f_puts("flag; num; time_ms; bmp_temp; bmp_press; fhotores; status; crc\n", &File3);
 		res3 = f_sync(&File3);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
 		res4 = f_open(&File4, (char*)path4, FA_WRITE | FA_CREATE_ALWAYS); // открытие файла, обязательно для работы с ним
-		f_puts("flag; num; time_s; gps_time_s; gps_time_us; crc\n", &File4);
+		f_puts("flag; num; time_ms; gps_time_s; gps_time_us; crc\n", &File4);
 		res4 = f_sync(&File4);
 	}
 	if(is_mount == FR_OK) { // монтируете файловую систему по пути SDPath, проверяете, что она смонтировалась, только при этом условии начинаете с ней работать
@@ -165,9 +165,9 @@ int app_main(){
 	ds18b20_set_config(&ds, 100, -100, DS18B20_RESOLUTION_12_BIT);
 
 	//переменные
-	bool alpha = false;
-	bool beta = false;
-	bool gamma = false;
+	int alpha = false;
+	int beta = false;
+	int gamma = false;
 	bool mount = false;
 
 	float temperature_celsius_gyro = 0.0;
@@ -225,7 +225,7 @@ int app_main(){
 	nrf24_mode_power_down(&nrf24);
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
-	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
+	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
 	nrf_config.rf_channel = 30;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
@@ -275,7 +275,10 @@ int app_main(){
 
 	char data[] = "Hello, World!";
 	while(1){
-		bb_radio_send_d(gamma_addr, (uint8_t *)data, sizeof(data));
+		alpha = bb_ping(alpha_addr);
+		beta = bb_ping(beta_addr);
+		gamma = bb_ping(gamma_addr);
+		gamma = bb_radio_send_d(gamma_addr, (uint8_t *)data, sizeof(data));
 		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
 		//height = 44330 * (1 - pow(pressure / ground_pressure, 1.0 / 5.255));
@@ -290,34 +293,12 @@ int app_main(){
 			mount = false;
 		}
 
-		pack3.status = (state_now << 0) | (comp << 13);
-
-		if(alpha){
-			pack3.status |= 1 << 2;
-		}
-		else{
-			pack3.status &= ~(1<<2);
-		}
-		if(beta){
-			pack3.status |= 1<<3;
-		}
-		else{
-			pack3.status &= ~(1<<3);
-		}
-		if(gamma){
-			pack3.status |= 1<<4;
-		}
-		else{
-			pack3.status &= ~(1<<4);
-		}
-		if(mount){
-			pack3.status |= 1<<5;
-		}
-		else{
-			pack3.status &= ~(1<<5);
-		}
-
-
+		pack3.status = ((state_now & 0x03) << 0) |
+				       ((alpha & 0x07) << 2) |
+					   ((beta & 0x07) << 5) |
+					   ((gamma & 0x07) << 8) |
+					   ((mount & 0x01) << 11) |
+				       ((comp & 0x07) << 13);
 
 		//packets
 		for (int i = 0; i < 3; i++){
@@ -368,12 +349,10 @@ int app_main(){
 			break;
 		case STATE_IN_ROCKET:
 			//передача данных на черные ящики и проверка фоторезистора
-			bb_chip_err(alpha_addr);
-			bb_chip_err(beta_addr);
-			bb_chip_err(gamma_addr);
-			bb_gps_err(alpha_addr);
-			bb_gps_err(beta_addr);
-			bb_gps_err(gamma_addr);
+			alpha = bb_chip_err(alpha_addr);
+			beta = bb_chip_err(beta_addr);
+			gamma = bb_chip_err(gamma_addr);
+			beta = bb_gps_err(beta_addr);
 			if(lux >=  limit_lux){
 				state_now = STATE_AFTER_ROCKET;
 				shift_reg_write_bit_16(&shift_reg_n, 10, true);
@@ -382,9 +361,9 @@ int app_main(){
 			break;
 		case STATE_AFTER_ROCKET:
 			//запись данных на ЧЯ, передача данных на землю и запись данных на сд
-			bb_buzzer_control(alpha_addr, true);
-			bb_buzzer_control(beta_addr, true);
-			bb_buzzer_control(gamma_addr, true);
+			alpha = bb_buzzer_control(alpha_addr, true);
+			beta = bb_buzzer_control(beta_addr, true);
+			gamma = bb_buzzer_control(gamma_addr, true);
 			state_now = STATE_AFTER_ROCKET;
 			break;
 		}
@@ -398,16 +377,18 @@ int app_main(){
 			pack1.crc = Crc16((uint8_t *)&pack1, sizeof(pack1) - 2);
 			pack3.time_ms = HAL_GetTick();
 			pack3.crc = Crc16((uint8_t *)&pack3, sizeof(pack3) - 2);// <<------pack
+			nrf24_fifo_flush_tx(&nrf24);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack1, sizeof(pack1), false);//32
+			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			fast_count++;
 			if(fast_count >= 10){
-				bb_write(alpha_addr, (uint8_t *)&pack1, sizeof(pack1));
-				bb_write(alpha_addr, (uint8_t *)&pack3, sizeof(pack3));
-				bb_write(beta_addr, (uint8_t *)&pack1, sizeof(pack1));
-				bb_write(beta_addr, (uint8_t *)&pack3, sizeof(pack3));
-				bb_write(gamma_addr, (uint8_t *)&pack1, sizeof(pack1));
-				bb_write(gamma_addr, (uint8_t *)&pack3, sizeof(pack3));
+				alpha = bb_write(alpha_addr, (uint8_t *)&pack1, sizeof(pack1));
+				alpha = bb_write(alpha_addr, (uint8_t *)&pack3, sizeof(pack3));
+				beta = bb_write(beta_addr, (uint8_t *)&pack1, sizeof(pack1));
+				beta = bb_write(beta_addr, (uint8_t *)&pack3, sizeof(pack3));
+				gamma = bb_write(gamma_addr, (uint8_t *)&pack1, sizeof(pack1));
+				gamma = bb_write(gamma_addr, (uint8_t *)&pack3, sizeof(pack3));
 				fast_count = 0;
 			}
 			start_time_nrf = HAL_GetTick();
@@ -466,15 +447,17 @@ int app_main(){
 			pack2.crc = Crc16((uint8_t *)&pack2, sizeof(pack2) - 2);
 			pack4.time_ms = HAL_GetTick();
 			pack4.crc = Crc16((uint8_t *)&pack4, sizeof(pack4) - 2);
-			bb_write(alpha_addr, (uint8_t *)&pack2, sizeof(pack2));
-			bb_write(alpha_addr, (uint8_t *)&pack4, sizeof(pack4));
-			bb_write(beta_addr, (uint8_t *)&pack2, sizeof(pack2));
-			bb_write(beta_addr, (uint8_t *)&pack4, sizeof(pack4));
-			bb_write(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
-			bb_write(gamma_addr, (uint8_t *)&pack4, sizeof(pack4));
+			nrf24_fifo_flush_tx(&nrf24);
+			alpha = bb_write(alpha_addr, (uint8_t *)&pack2, sizeof(pack2));
+			alpha = bb_write(alpha_addr, (uint8_t *)&pack4, sizeof(pack4));
+			beta = bb_write(beta_addr, (uint8_t *)&pack2, sizeof(pack2));
+			beta = bb_write(beta_addr, (uint8_t *)&pack4, sizeof(pack4));
+			gamma = bb_write(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
+			gamma = bb_write(gamma_addr, (uint8_t *)&pack4, sizeof(pack4));
 			start_time_nrf = HAL_GetTick();
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack2, sizeof(pack2), false);
-			bb_radio_send(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
+			gamma = bb_radio_send(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
+			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
 
 			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал

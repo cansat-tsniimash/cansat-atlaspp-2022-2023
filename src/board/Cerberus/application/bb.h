@@ -140,4 +140,5 @@ int bb_radio_send_d(uint16_t I2C_ADDRES, uint8_t* buf, uint8_t size);
 //args: i2c address, settings pack struct
 //ret: hal error
 int bb_settings_pack(uint16_t I2C_ADDRES, settings_pack_t *settings_pack);
+int bb_ping(uint16_t I2C_ADDRES);
 #endif /* BB_H_ */
