@@ -17,6 +17,7 @@
 #include "drivers_i2c/Inc/its-i2c-link.h"
 #include <MX25L512_/MX25L512_up.h>
 #include <ATGM336H/nmea_gps.h>
+#include <mem-proxy.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
 extern UART_HandleTypeDef huart2;
@@ -165,11 +166,13 @@ int app_main(){
 	its_i2c_link_start();
 
 //variables
+	uint32_t time_nrf = HAL_GetTick();
 	uint64_t tx_adrr = 0x123456789a;
 	uint8_t arr[32] = {1, 2, 3, 4, 5};
 	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
 	nrf24_fifo_status_t rx_status;
+	int mem_err = 0;
 //settings
 	shift_reg_t shift_reg;
 	shift_reg.bus = &hspi1;
@@ -279,7 +282,6 @@ int app_main(){
     nrf_pack.num = 0;
 
     uint32_t addr_read = 0;
-    uint32_t addr_write = 0;
 
 	uint16_t a = 0;
 	uint16_t period = 200;
@@ -316,8 +318,10 @@ int app_main(){
 		nrf_pack.fix = fix_;
 		nrf_pack.gps_time_s = time_s_;
 		nrf_pack.gps_time_us = time_us_;
-
+		memproxy_init(&bus_data);
+		memproxy_init_gps(&bus_gps);
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
+
 		if (rc > 0)
 		{
 			switch(pack.num){
@@ -351,7 +355,8 @@ int app_main(){
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						uint8_t size = pack.size;
+						memproxy_write(&bus_data, pack.size);
+						/*uint8_t size = pack.size;
 						uint32_t new_addr = addr_write + size;
 						if(new_addr < 0xffff){
 							if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
@@ -359,11 +364,14 @@ int app_main(){
 								addr_write = new_addr & (0x0f << 12);
 								new_addr = addr_write + size;
 							}
-							mx25l512_PP_up(&bus, &addr_write, pack.data, pack.size, 10);//Записываю данные
+							static int no = 0;
+							memset(pack.data, no, pack.size);
+							no++;
+							mx25l512_PP_up(&bus_data, &addr_write, pack.data, pack.size, 10);//Записываю данные
 							addr_write = new_addr;
 							pack.size = size;
-							its_i2c_link_write(&pack, sizeof(pack));
-						}
+							its_i2c_link_write(&pack, sizeof(pack));*/
+						//}
 					}
 					break;
 				case CMD_Read:
@@ -467,11 +475,29 @@ int app_main(){
 
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
+			if (HAL_GetTick() - time_nrf >= 10){
 				nrf_pack.time_ms = HAL_GetTick();
 				nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 				nrf_pack.num++;
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
 				start_time_nrf = HAL_GetTick();
+
+				memproxy_write(&bus_gps, pack.size);
+				/*uint8_t size = pack.size;
+				uint32_t new_addr_gps = addr_write_gps + size;
+				if(new_addr_gps < 0xffff){
+					if ((addr_write_gps & (0x0f << 12)) != (new_addr_gps & (0x0f << 12)))
+					{
+						addr_write_gps = new_addr_gps & (0x0f << 12);
+						new_addr_gps = addr_write_gps + size;
+					}
+					mem_err = mx25l512_PP_up(&bus_data, &addr_write_gps, pack.data, pack.size, 10);//Записываю данные
+					addr_write_gps = new_addr_gps;
+					pack.size = size;
+					its_i2c_link_write(&pack, sizeof(pack));
+				}*/
+			}
+			time_nrf = HAL_GetTick();
 		}
 		else
 			if (HAL_GetTick()-start_time_nrf >= 100)

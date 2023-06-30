@@ -15,6 +15,7 @@
 #include <nRF24L01_PL/nrf24_defs.h>
 #include "drivers_i2c/Inc/its-i2c-link.h"
 #include <MX25L512_/MX25L512_up.h>
+#include <mem-proxy.h>
 extern SPI_HandleTypeDef hspi1;
 extern I2C_HandleTypeDef hi2c1;
 
@@ -173,7 +174,6 @@ int app_main(){
 	mx25_data_pins.pos_CS = 6;
 	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
 
-
 	uint8_t byte_r = 0;
 	uint8_t byte_w = 74;
 	uint8_t stat_reg = 0;
@@ -245,6 +245,10 @@ int app_main(){
 	cmd_pack_t pack;
 	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
+
+	memproxy_init(&bus_data);
+
+
 	uint16_t a = 0;
 	uint16_t period = 200;
 	int check_i = 0;
@@ -270,6 +274,24 @@ int app_main(){
 		a++;
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
+		/*for (int i = 0 ; i < 100; i++)
+			{
+				volatile uint8_t buffer[200];
+				memset(buffer, i, 200);
+				memproxy_write(buffer, 200);
+				volatile int x = 0;
+				//HAL_Delay(100);
+			}
+
+			for (int i = 0 ; i < 100; i++)
+			{
+				volatile uint8_t buffer[0x100];
+				memset(buffer, 0xcc, 0x100);
+				uint32_t addr = 0x100*i;
+				mx25l512_read(&bus_data, &addr, buffer, 0x100);
+
+				volatile int x = 0;
+			}*/
 		if (rc > 0)
 		{
 			switch(pack.num){
@@ -299,19 +321,21 @@ int app_main(){
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						uint8_t size = pack.size;
+						memproxy_write(&bus_data, pack.size);
+/*						uint8_t size = pack.size;
 						uint32_t new_addr = addr_write + size;
+
 						if(new_addr < 0xffff){
 							if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
 							{
 								addr_write = new_addr & (0x0f << 12);
 								new_addr = addr_write + size;
 							}
-							mx25l512_PP_up(&bus, &addr_write, pack.data, pack.size, 10);//Записываю данные
+							mx25l512_PP_up(&bus_data, &addr_write, pack.data, pack.size, 10);//Записываю данные
 							addr_write = new_addr;
 							pack.size = size;
 							its_i2c_link_write(&pack, sizeof(pack));
-						}
+						}*/
 					}
 					break;
 				case CMD_Read:

@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "main.h"
+#include "mem-proxy.h"
 
 
 #include "drivers_i2c/Inc/its-i2c-link.h"
@@ -97,6 +98,8 @@ int all_systems_check(bus_t *bus_data, int comp)
 	return ret;
 }
 
+uint8_t read_buf[256];
+
 int app_main(){
 	on_bb();
 
@@ -113,6 +116,7 @@ int app_main(){
 	mx25_pins.cs_port = GPIOB;
 	mx25_pins.cs_pin = GPIO_PIN_1;
 	mx25l512_spi_init(&bus, &hspi1, &mx25_pins);
+	memproxy_init(&bus);
 
 	volatile int check = all_systems_check(&bus,  SYS_TEST_MEM_DATA);
 	buzzer_control(true);
@@ -153,6 +157,28 @@ int app_main(){
 		HAL_Delay(1);
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
+
+	/*	for (int i = 0 ; i < 100; i++)
+		{
+			volatile uint8_t buffer[200];
+			memset(buffer, i, 200);
+			memproxy_write(buffer, 200);
+			volatile int x = 0;
+		}
+
+		for (int i = 0 ; i < 100; i++)
+		{
+			volatile uint8_t buffer[0x100];
+			memset(buffer, 0xcc, 0x100);
+			uint32_t addr = 0x100*i;
+			mx25l512_read(&bus, &addr, buffer, 0x100);
+
+			volatile int x = 0;
+		}*/
+
+		/*while(1)
+		{volatile int check = all_systems_check(&bus,  SYS_TEST_MEM_DATA);}*/
+
 		if (rc > 0)
 		{
 			switch(pack.num){
@@ -163,16 +189,19 @@ int app_main(){
 					}
 					break;
 				case CMD_CE:
-					if (pack.size == 0)
+					if (pack.size == 0){
+						addr_write = 0;
 						mx25l512_CE_up(&bus, 10);//Затираю чип целиком
+					}
 					break;
 
 				case CMD_ReadADDR:
 					if ((pack.size = 5) && (pack.data[4] <= 32))
 					{
-						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
+						uint32_t addr = (pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24) & 0xFF00;
 						uint8_t size = pack.data[4];
-						mx25l512_read(&bus, &addr, pack.data + 4, size);//читаю данные
+						mx25l512_read(&bus, &addr, read_buf, 256);//читаю данные
+						memcpy(pack.data + 4, read_buf + ((pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24) & 0xFF), size);
 						pack.size = size + 4;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
@@ -180,19 +209,7 @@ int app_main(){
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						uint8_t size = pack.size;
-						uint32_t new_addr = addr_write + size;
-						if(new_addr < 0xffff){
-							if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-							{
-								addr_write = new_addr & (0x0f << 12);
-								new_addr = addr_write + size;
-							}
-							mx25l512_PP_up(&bus, &addr_write, pack.data, pack.size, 10);//Записываю данные
-							addr_write = new_addr;
-							pack.size = size;
-							its_i2c_link_write(&pack, sizeof(pack));
-						}
+						memproxy_write(pack.data, pack.size);
 					}
 					break;
 				case CMD_Read:
@@ -200,7 +217,8 @@ int app_main(){
 					{
 						addr_read = 0x0000;
 						uint8_t size = pack.data[0];
-						mx25l512_read(&bus, &addr_read, pack.data, size);
+						mx25l512_read(&bus, &addr_read, read_buf, 256);//читаю данные
+						memcpy(pack.data, read_buf, size);
 						addr_read = size;
 						pack.size = size;
 						its_i2c_link_write(&pack, sizeof(pack));
@@ -211,15 +229,22 @@ int app_main(){
 					if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						uint8_t size = pack.data[0];
-						uint32_t new_addr = addr_read + size;
-						if(new_addr < 0xffff){
-							if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
+						if(addr_read + size < 0xffff){
+							uint32_t new_addr = addr_read & 0xFF00;
+							mx25l512_read(&bus, &new_addr, read_buf, 256);//читаю данные
+							if (((addr_read & 0xFF) + size) > 0xFF)
 							{
-								addr_read = new_addr & (0x0f << 12);
-								new_addr = addr_read + size;
+								uint8_t part = 0xFF - (addr_read & 0xFF) + 1;
+								memcpy(pack.data, read_buf + (addr_read & 0xFF), part);
+								new_addr = (addr_read + size) & 0xFF00;
+								mx25l512_read(&bus, &new_addr, read_buf, 256);
+								memcpy(pack.data + part, read_buf, size - part);
 							}
-							mx25l512_read(&bus, &addr_read, pack.data, size);
-							addr_read = new_addr;
+							else
+							{
+								memcpy(pack.data, read_buf + (addr_read & 0xFF), size);
+							}
+							addr_read = addr_read + size;
 							pack.size = size;
 							its_i2c_link_write(&pack, sizeof(pack));
 						}
