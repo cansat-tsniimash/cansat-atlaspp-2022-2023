@@ -104,7 +104,7 @@ int memproxy_init_gps(bus_t * bus_)
 		mx25l512_read(bus_gps, &addr, &lead, 0x01);
 		if (lead != 0x00)
 		{
-			addr_carret = addr;
+			addr_carret_gps = addr;
 			found = true;
 			break;
 		}

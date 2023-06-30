@@ -159,6 +159,8 @@ int all_systems_check(nrf24_lower_api_config_t *nrf24, bus_t *bus_data, bus_t *b
 	return ret;
 }
 
+uint8_t read_buf[256];
+
 int app_main(){
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_I2C1);
@@ -345,17 +347,27 @@ int app_main(){
 				case CMD_ReadADDR:
 					if ((pack.size = 5) && (pack.data[4] <= 32))
 					{
+						uint32_t addr = (pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24) & 0xFF00;
+						uint8_t size = pack.data[4];
+						mx25l512_read(&bus_data, &addr, read_buf, 256);//читаю данные
+						memcpy(pack.data + 4, read_buf + ((pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24) & 0xFF), size);
+						pack.size = size + 4;
+						its_i2c_link_write(&pack, sizeof(pack));
+					}
+
+				/*	if ((pack.size = 5) && (pack.data[4] <= 32))
+					{
 						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
 						uint8_t size = pack.data[4];
 						mx25l512_read(&bus_data, &addr, pack.data + 4, size);//читаю данные
 						pack.size = size + 4;
 						its_i2c_link_write(&pack, sizeof(pack));
-					}
+					}*/
 					break;
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
-						memproxy_write(&bus_data, pack.size);
+						memproxy_write(pack.data, pack.size);
 						/*uint8_t size = pack.size;
 						uint32_t new_addr = addr_write + size;
 						if(new_addr < 0xffff){
@@ -379,6 +391,17 @@ int app_main(){
 					{
 						addr_read = 0x0000;
 						uint8_t size = pack.data[0];
+						mx25l512_read(&bus_data, &addr_read, read_buf, 256);//читаю данные
+						memcpy(pack.data, read_buf, size);
+						addr_read = size;
+						pack.size = size;
+						its_i2c_link_write(&pack, sizeof(pack));
+
+					}
+					/*if (pack.size == 1 && pack.data[0] <= 32)
+					{
+						addr_read = 0x0000;
+						uint8_t size = pack.data[0];
 						mx25l512_read(&bus_data, &addr_read, pack.data, size);
 						for (int i = 0; i < size; i++)
 							pack.data[i] = i;
@@ -386,10 +409,33 @@ int app_main(){
 						pack.size = size;
 						its_i2c_link_write(&pack, sizeof(pack));
 
-					}
+					}*/
 					break;
 				case CMD_Continue:
 					if (pack.size == 1 && pack.data[0] <= 32)
+					{
+						uint8_t size = pack.data[0];
+						if(addr_read + size < 0xffff){
+							uint32_t new_addr = addr_read & 0xFF00;
+							mx25l512_read(&bus_data, &new_addr, read_buf, 256);//читаю данные
+							if (((addr_read & 0xFF) + size) > 0xFF)
+							{
+								uint8_t part = 0xFF - (addr_read & 0xFF) + 1;
+								memcpy(pack.data, read_buf + (addr_read & 0xFF), part);
+								new_addr = (addr_read + size) & 0xFF00;
+								mx25l512_read(&bus_data, &new_addr, read_buf, 256);
+								memcpy(pack.data + part, read_buf, size - part);
+							}
+							else
+							{
+								memcpy(pack.data, read_buf + (addr_read & 0xFF), size);
+							}
+							addr_read = addr_read + size;
+							pack.size = size;
+							its_i2c_link_write(&pack, sizeof(pack));
+						}
+					}
+		/*			if (pack.size == 1 && pack.data[0] <= 32)
 					{
 						uint8_t size = pack.data[0];
 						uint32_t new_addr = addr_read + size;
@@ -404,7 +450,7 @@ int app_main(){
 							pack.size = size;
 							its_i2c_link_write(&pack, sizeof(pack));
 						}
-					}
+					}*/
 					break;
 				case CMD_OFF:
 					if (pack.size == 0)
@@ -415,11 +461,31 @@ int app_main(){
 				case CMD_Read_gps:
 					if (pack.size == 2)
 					{
-						uint16_t num = *((uint16_t *)pack.data);
-						uint32_t addr = ((num % 136)* 30) | (num / 136) << 12;
+						uint16_t num;
+						memcpy(&num, pack.data, sizeof(uint16_t));
+						uint32_t addr = num*30 + (((num*30) >> 8) & 0xFF);
+						if(addr + 30 <= 0xffff){
+							uint32_t new_addr = addr & 0xFF00;
+							mx25l512_read(&bus_gps, &new_addr, read_buf, 256);//читаю данные
+							if (((addr & 0xFF) + 30) > 0xFF)
+							{
+								uint8_t part = 0xFF - (addr & 0xFF) + 1;
+								memcpy(pack.data+ 2, read_buf + (addr & 0xFF), part);
+								new_addr = (addr + 30) & 0xFF00;
+								mx25l512_read(&bus_gps, &new_addr, read_buf, 256);
+								memcpy(pack.data + part + 2, read_buf + 1, 30 - part);
+							}
+							else
+							{
+								memcpy(pack.data + 2, read_buf + (addr & 0xFF), 30);
+							}
+							pack.size = 30 + 2;
+							its_i2c_link_write(&pack, sizeof(pack));
+						}
+/*
 						mx25l512_read(&bus_gps, &addr, pack.data + 2, 30);
-						pack.size = 30 + 2;
-						its_i2c_link_write(&pack, sizeof(pack));
+
+						its_i2c_link_write(&pack, sizeof(pack));*/
 					}
 					break;
 				case CMD_Write_flys_bit:
@@ -482,7 +548,7 @@ int app_main(){
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
 				start_time_nrf = HAL_GetTick();
 
-				memproxy_write(&bus_gps, pack.size);
+				memproxy_write((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 				/*uint8_t size = pack.size;
 				uint32_t new_addr_gps = addr_write_gps + size;
 				if(new_addr_gps < 0xffff){
