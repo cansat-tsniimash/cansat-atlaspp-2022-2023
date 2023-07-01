@@ -61,8 +61,6 @@ void Error_Handler(void);
 #define oe_GPIO_Port GPIOC
 #define latch_Pin GPIO_PIN_1
 #define latch_GPIO_Port GPIOC
-#define adc_Pin GPIO_PIN_7
-#define adc_GPIO_Port GPIOA
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

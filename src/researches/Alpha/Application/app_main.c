@@ -109,7 +109,6 @@ int app_main(){
 	cmd_pack_t pack;
 
 	uint32_t addr_read = 0;
-	uint32_t addr_write = 0;
 
 	bus_t bus;
 	mx25l512_spi_pins_t mx25_pins;
@@ -158,27 +157,6 @@ int app_main(){
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 
-	/*	for (int i = 0 ; i < 100; i++)
-		{
-			volatile uint8_t buffer[200];
-			memset(buffer, i, 200);
-			memproxy_write(buffer, 200);
-			volatile int x = 0;
-		}
-
-		for (int i = 0 ; i < 100; i++)
-		{
-			volatile uint8_t buffer[0x100];
-			memset(buffer, 0xcc, 0x100);
-			uint32_t addr = 0x100*i;
-			mx25l512_read(&bus, &addr, buffer, 0x100);
-
-			volatile int x = 0;
-		}*/
-
-		/*while(1)
-		{volatile int check = all_systems_check(&bus,  SYS_TEST_MEM_DATA);}*/
-
 		if (rc > 0)
 		{
 			switch(pack.num){
@@ -190,7 +168,6 @@ int app_main(){
 					break;
 				case CMD_CE:
 					if (pack.size == 0){
-						addr_write = 0;
 						mx25l512_CE_up(&bus, 10);//Затираю чип целиком
 					}
 					break;

@@ -151,9 +151,6 @@ int app_main(){
 	its_i2c_link_start();
 
 //variables
-	uint64_t tx_adrr = 0xafafafaf01;
-	uint8_t arr[32] = {1, 2, 3, 4, 5};
-	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
 	nrf24_fifo_status_t rx_status;
 //settings
@@ -169,18 +166,12 @@ int app_main(){
 	buzzer_control(&shift_reg, false);
 	shift_reg_oe(&shift_reg, false);
 
-
 	bus_t bus_data;
 	mx25l512_spi_pins_sr_t mx25_data_pins;
 	mx25_data_pins.this = &shift_reg;
 	mx25_data_pins.pos_CS = 6;
 	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
-
-	uint8_t byte_r = 0;
-	uint8_t byte_w = 74;
-	uint8_t stat_reg = 0;
-
-	uint32_t addr2 = 8;
+	memproxy_init(&bus_data);
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
@@ -237,19 +228,11 @@ int app_main(){
 	nrf24_mode_standby(&nrf24);
 	nrf24_mode_tx(&nrf24);
 
-	uint32_t addr_write = 0;
 	uint32_t addr_read = 0;
-	int nrf_irq;
-	uint32_t addr = 0x00;
 	settings_pack_t settings_pack;
 	uint32_t start_time_nrf = HAL_GetTick();
 	uint32_t time_nrf = HAL_GetTick();
 	cmd_pack_t pack;
-	nrf_pack_t nrf_pack = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-
-
-	memproxy_init(&bus_data);
-
 
 	uint16_t a = 0;
 	uint16_t period = 200;
@@ -276,24 +259,6 @@ int app_main(){
 		a++;
 
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
-		/*for (int i = 0 ; i < 100; i++)
-			{
-				volatile uint8_t buffer[200];
-				memset(buffer, i, 200);
-				memproxy_write(buffer, 200);
-				volatile int x = 0;
-				//HAL_Delay(100);
-			}
-
-			for (int i = 0 ; i < 100; i++)
-			{
-				volatile uint8_t buffer[0x100];
-				memset(buffer, 0xcc, 0x100);
-				uint32_t addr = 0x100*i;
-				mx25l512_read(&bus_data, &addr, buffer, 0x100);
-
-				volatile int x = 0;
-			}*/
 		if (rc > 0)
 		{
 			switch(pack.num){
@@ -320,33 +285,11 @@ int app_main(){
 						pack.size = size + 4;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
-					/*if ((pack.size = 5) && (pack.data[4] <= 32))
-					{
-						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						uint8_t size = pack.data[4];
-						mx25l512_read(&bus_data, &addr, pack.data + 4, size);//читаю данные
-						pack.size = size + 4;
-						its_i2c_link_write(&pack, sizeof(pack));
-					}*/
 					break;
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
 						memproxy_write(pack.data, pack.size);
-/*						uint8_t size = pack.size;
-						uint32_t new_addr = addr_write + size;
-
-						if(new_addr < 0xffff){
-							if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-							{
-								addr_write = new_addr & (0x0f << 12);
-								new_addr = addr_write + size;
-							}
-							mx25l512_PP_up(&bus_data, &addr_write, pack.data, pack.size, 10);//Записываю данные
-							addr_write = new_addr;
-							pack.size = size;
-							its_i2c_link_write(&pack, sizeof(pack));
-						}*/
 					}
 					break;
 				case CMD_Read:
@@ -361,16 +304,6 @@ int app_main(){
 						its_i2c_link_write(&pack, sizeof(pack));
 
 					}
-					/*if (pack.size == 1 && pack.data[0] <= 32)
-					{
-						addr_read = 0x0000;
-						uint8_t size = pack.data[0];
-						mx25l512_read(&bus_data, &addr_read, pack.data, size);
-						addr_read = size << 4;
-						pack.size = size;
-						its_i2c_link_write(&pack, sizeof(pack));
-
-					}*/
 					break;
 				case CMD_Continue:
 					if (pack.size == 1 && pack.data[0] <= 32)
@@ -396,22 +329,6 @@ int app_main(){
 							its_i2c_link_write(&pack, sizeof(pack));
 						}
 					}
-					/*if (pack.size == 1 && pack.data[0] <= 32)
-					{
-						uint8_t size = pack.data[0];
-						uint32_t new_addr = addr_read + size;
-						if(new_addr < 0xffff){
-							if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-							{
-								addr_read = new_addr & (0x0f << 12);
-								new_addr = addr_read + size;
-							}
-							mx25l512_read(&bus_data, &addr_read, pack.data, size);
-							addr_read = new_addr;
-							pack.size = size;
-							its_i2c_link_write(&pack, sizeof(pack));
-						}
-					}*/
 					break;
 				case CMD_OFF:
 					if (pack.size == 0)
@@ -473,7 +390,7 @@ int app_main(){
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL)
 		{
-			if (HAL_GetTick() - time_nrf >= 1){
+			if (HAL_GetTick() - time_nrf >= 2){
 				nrf24_fifo_write(&nrf24, (uint8_t *)buf, sizeof(buf), false);
 				time_nrf = HAL_GetTick();
 			}

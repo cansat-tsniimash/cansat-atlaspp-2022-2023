@@ -23,7 +23,7 @@ typedef struct
 
 extern I2C_HandleTypeDef hi2c1;
 
-#define I2C_TIMEOUT 10
+#define I2C_TIMEOUT 40
 
 int bb_buzzer_control(uint16_t I2C_ADDRES, bool onoff)
 {
@@ -192,7 +192,7 @@ int bb_read_req(uint16_t I2C_ADDRES, uint8_t size, bool is_continue){
 	else
 	 	i2c_pack.data[0] = size;
 	HAL_StatusTypeDef rc = HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRES, &cmd, sizeof(cmd), I2C_TIMEOUT);
-	if (rc == HAL_BUSY)
+	if (rc == HAL_BUSY || rc == HAL_ERROR)
 	{
 	 	I2C_ClearBusyFlagErratum(&hi2c1, 100);
 	}

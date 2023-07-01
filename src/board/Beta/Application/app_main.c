@@ -169,12 +169,8 @@ int app_main(){
 
 //variables
 	uint32_t time_nrf = HAL_GetTick();
-	uint64_t tx_adrr = 0x123456789a;
-	uint8_t arr[32] = {1, 2, 3, 4, 5};
-	uint8_t packet[32] = {1, 2, 3};
 	nrf24_fifo_status_t tx_status;
 	nrf24_fifo_status_t rx_status;
-	int mem_err = 0;
 //settings
 	shift_reg_t shift_reg;
 	shift_reg.bus = &hspi1;
@@ -193,17 +189,14 @@ int app_main(){
 	mx25_data_pins.this = &shift_reg;
 	mx25_data_pins.pos_CS = 1;
 	mx25l512_spi_init_sr(&bus_data, &hspi1, &mx25_data_pins);
+	memproxy_init(&bus_data);
 
 	bus_t bus_gps;
 	mx25l512_spi_pins_sr_t mx25_gps_pins;
 	mx25_gps_pins.this = &shift_reg;
 	mx25_gps_pins.pos_CS = 2;
 	mx25l512_spi_init_sr(&bus_gps, &hspi1, &mx25_gps_pins);
-	uint8_t byte_r = 0;
-	uint8_t byte_w = 0x4A;
-	uint32_t addr = 8;
-	uint8_t stat_reg = 0;
-	uint8_t data3[3] = {0};
+	memproxy_init_gps(&bus_gps);
 
 	nrf24_spi_pins_sr_t nrf_pins;
 	nrf_pins.this = &shift_reg;
@@ -227,7 +220,7 @@ int app_main(){
 	nrf_protocol_config.auto_retransmit_count = 0;
 	nrf_protocol_config.auto_retransmit_delay = 0;
 	nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-	nrf24_pipe_set_tx_addr(&nrf24, 0x133456789a);//0xafafafafaf);//
+	nrf24_pipe_set_tx_addr(&nrf24, 0x133456789a);
 
 	nrf24_pipe_config_t pipe_config;
 	for (int i = 1; i < 6; i++)
@@ -277,8 +270,6 @@ int app_main(){
 	//__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);
 
 	settings_pack_t settings_pack;
-
-
 	nrf_pack_t nrf_pack;
     nrf_pack.flag = 0x0f;
     nrf_pack.num = 0;
@@ -320,8 +311,7 @@ int app_main(){
 		nrf_pack.fix = fix_;
 		nrf_pack.gps_time_s = time_s_;
 		nrf_pack.gps_time_us = time_us_;
-		memproxy_init(&bus_data);
-		memproxy_init_gps(&bus_gps);
+
 		int rc = its_i2c_link_read(&pack, sizeof(pack));
 
 		if (rc > 0)
@@ -354,36 +344,11 @@ int app_main(){
 						pack.size = size + 4;
 						its_i2c_link_write(&pack, sizeof(pack));
 					}
-
-				/*	if ((pack.size = 5) && (pack.data[4] <= 32))
-					{
-						uint32_t addr = pack.data[0] | pack.data[1] << 8 | pack.data[2] << 16 | pack.data[3] << 24;
-						uint8_t size = pack.data[4];
-						mx25l512_read(&bus_data, &addr, pack.data + 4, size);//читаю данные
-						pack.size = size + 4;
-						its_i2c_link_write(&pack, sizeof(pack));
-					}*/
 					break;
 				case CMD_Write:
 					if (pack.size <= 32)
 					{
 						memproxy_write(pack.data, pack.size);
-						/*uint8_t size = pack.size;
-						uint32_t new_addr = addr_write + size;
-						if(new_addr < 0xffff){
-							if ((addr_write & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-							{
-								addr_write = new_addr & (0x0f << 12);
-								new_addr = addr_write + size;
-							}
-							static int no = 0;
-							memset(pack.data, no, pack.size);
-							no++;
-							mx25l512_PP_up(&bus_data, &addr_write, pack.data, pack.size, 10);//Записываю данные
-							addr_write = new_addr;
-							pack.size = size;
-							its_i2c_link_write(&pack, sizeof(pack));*/
-						//}
 					}
 					break;
 				case CMD_Read:
@@ -398,18 +363,6 @@ int app_main(){
 						its_i2c_link_write(&pack, sizeof(pack));
 
 					}
-					/*if (pack.size == 1 && pack.data[0] <= 32)
-					{
-						addr_read = 0x0000;
-						uint8_t size = pack.data[0];
-						mx25l512_read(&bus_data, &addr_read, pack.data, size);
-						for (int i = 0; i < size; i++)
-							pack.data[i] = i;
-						addr_read = size << 4;
-						pack.size = size;
-						its_i2c_link_write(&pack, sizeof(pack));
-
-					}*/
 					break;
 				case CMD_Continue:
 					if (pack.size == 1 && pack.data[0] <= 32)
@@ -424,7 +377,8 @@ int app_main(){
 								memcpy(pack.data, read_buf + (addr_read & 0xFF), part);
 								new_addr = (addr_read + size) & 0xFF00;
 								mx25l512_read(&bus_data, &new_addr, read_buf, 256);
-								memcpy(pack.data + part, read_buf, size - part);
+								memcpy(pack.data + part, read_buf + 1, size - part);
+								addr_read += 1;
 							}
 							else
 							{
@@ -435,22 +389,6 @@ int app_main(){
 							its_i2c_link_write(&pack, sizeof(pack));
 						}
 					}
-		/*			if (pack.size == 1 && pack.data[0] <= 32)
-					{
-						uint8_t size = pack.data[0];
-						uint32_t new_addr = addr_read + size;
-						if(new_addr < 0xffff){
-							if ((addr_read & (0x0f << 12)) != (new_addr & (0x0f << 12)))
-							{
-								addr_read = new_addr & (0x0f << 12);
-								new_addr = addr_read + size;
-							}
-							mx25l512_read(&bus_data, &addr_read, pack.data, size);
-							addr_read = new_addr;
-							pack.size = size;
-							its_i2c_link_write(&pack, sizeof(pack));
-						}
-					}*/
 					break;
 				case CMD_OFF:
 					if (pack.size == 0)
@@ -482,19 +420,8 @@ int app_main(){
 							pack.size = 30 + 2;
 							its_i2c_link_write(&pack, sizeof(pack));
 						}
-/*
-						mx25l512_read(&bus_gps, &addr, pack.data + 2, 30);
-
-						its_i2c_link_write(&pack, sizeof(pack));*/
 					}
 					break;
-				case CMD_Write_flys_bit:
-					if (pack.size == 1)
-					{
-
-					}
-					break;
-
 				case CMD_Radio_send:
 					if (pack.size <= 32)
 					{
@@ -507,7 +434,6 @@ int app_main(){
 						memcpy(buf, pack.data, pack.size);
 
 					}
-
 					if(pack.size == 0)
 					{
 						nrf24_fifo_write(&nrf24, buf, sizeof(buf), false);
@@ -531,13 +457,11 @@ int app_main(){
 						nrf_protocol_config.auto_retransmit_delay = settings_pack.auto_retransmit_delay;
 						nrf24_pipe_set_tx_addr(&nrf24, settings_pack.tx_channel);
 						nrf24_setup_protocol(&nrf24, &nrf_protocol_config);
-
 					}
 					break;
 
 				}
 		}
-
 
 		nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
 		if (tx_status != NRF24_FIFO_FULL){
@@ -549,19 +473,6 @@ int app_main(){
 				start_time_nrf = HAL_GetTick();
 
 				memproxy_write((uint8_t *)&nrf_pack, sizeof(nrf_pack));
-				/*uint8_t size = pack.size;
-				uint32_t new_addr_gps = addr_write_gps + size;
-				if(new_addr_gps < 0xffff){
-					if ((addr_write_gps & (0x0f << 12)) != (new_addr_gps & (0x0f << 12)))
-					{
-						addr_write_gps = new_addr_gps & (0x0f << 12);
-						new_addr_gps = addr_write_gps + size;
-					}
-					mem_err = mx25l512_PP_up(&bus_data, &addr_write_gps, pack.data, pack.size, 10);//Записываю данные
-					addr_write_gps = new_addr_gps;
-					pack.size = size;
-					its_i2c_link_write(&pack, sizeof(pack));
-				}*/
 			}
 			time_nrf = HAL_GetTick();
 		}

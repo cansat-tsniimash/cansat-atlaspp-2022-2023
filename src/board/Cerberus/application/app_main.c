@@ -123,7 +123,6 @@ int app_main(){
 	shift_reg_init(&shift_reg_r);
 	shift_reg_write_8(&shift_reg_r, 0xFF);
 
-
 	/*инициализация bme*/
 	struct bme_spi_intf_sr bme_struct;
 	bme_struct.sr_pin = 2;
@@ -134,7 +133,6 @@ int app_main(){
 
 	//стх и структура лcмa
 	stmdev_ctx_t ctx_lsm;
-
 	struct lsm_spi_intf_sr lsm_sr;
 	lsm_sr.sr_pin = 4;
 	lsm_sr.spi = &hspi2;
@@ -143,7 +141,6 @@ int app_main(){
 
 	//стх и структура лиса
 	stmdev_ctx_t ctx_lis;
-
 	struct lis_spi_intf_sr lis_sr;
 	lis_sr.sr_pin = 3;
 	lis_sr.spi = &hspi2;
@@ -175,6 +172,9 @@ int app_main(){
 	float gyro_dps[3] = {0};
 	float temperature_celsius_mag = 0.0;
 	float mag[3] = {0};
+	float lat;
+	float lon;
+	float alt;
 	uint16_t temp_ds;
 	bool crc_ok_ds = false;
 	uint32_t start_time_ds = HAL_GetTick();
@@ -225,7 +225,7 @@ int app_main(){
 	nrf24_mode_power_down(&nrf24);
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
-	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
+	nrf_config.tx_power = NRF24_TXPOWER_MINUS_0_DBM;
 	nrf_config.rf_channel = 30;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
@@ -264,27 +264,32 @@ int app_main(){
 	__HAL_UART_ENABLE_IT(&huart6, UART_IT_RXNE);
 	__HAL_UART_ENABLE_IT(&huart6, UART_IT_ERR);
 	uint64_t gps_time_s;
-
-							/*ТУТ ВАЙЛ*/
-
-
-
-
+	uint32_t gps_time_us;
 	uint16_t str_wr;
 	char str_buf[300];
-
 	char data[] = "Hello, World!";
+	gamma = bb_radio_send_d(gamma_addr, (uint8_t *)data, sizeof(data));
 	while(1){
 		alpha = bb_ping(alpha_addr);
 		beta = bb_ping(beta_addr);
 		gamma = bb_ping(gamma_addr);
-		gamma = bb_radio_send_d(gamma_addr, (uint8_t *)data, sizeof(data));
+
 		//данные в беск цикле
 		bme_data = bme_read_data(&bme);
+		pack3.bmp_temp = bme_data.temperature * 100;
+		pack3.bmp_press = bme_data.pressure;
+
 		//height = 44330 * (1 - pow(pressure / ground_pressure, 1.0 / 5.255));
 		float lux = photorezistor_get_lux(photrez);
+		pack3.fhotorez = lux;
+
 		lsmread(&ctx_lsm, &temperature_celsius_gyro, &acc_g, &gyro_dps);
 		lisread(&ctx_lis, &temperature_celsius_mag, &mag);
+		for (int i = 0; i < 3; i++){
+			pack1.accl[i] = acc_g[i]*1000;
+			pack1.gyro[i] = gyro_dps[i]*1000;
+			pack1.mag[i] = mag[i]*1000;
+		}
 
 		if(is_mount == FR_OK){
 			mount = true;
@@ -300,21 +305,16 @@ int app_main(){
 					   ((mount & 0x01) << 11) |
 				       ((comp & 0x07) << 13);
 
-		//packets
-		for (int i = 0; i < 3; i++){
-			pack1.accl[i] = acc_g[i]*1000;
-			pack1.gyro[i] = gyro_dps[i]*1000;
-			pack1.mag[i] = mag[i]*1000;
-		}
 		gps_work();
-		gps_get_coords(&cookie, &pack2.lat, &pack2.lon, &pack2.alt, &fix_);
-		gps_get_time(&cookie, &gps_time_s, &pack4.gps_time_us);
-		pack3.bmp_temp = bme_data.temperature * 100;
-		pack3.bmp_press = bme_data.pressure;
-		pack3.fhotorez = lux;
-		pack2.fix = fix_;
+		gps_get_coords(&cookie, &lat, &lon, &alt, &fix_);
+		gps_get_time(&cookie, &gps_time_s, &gps_time_us);
+		pack2.lat = lat;
+		pack2.lon = lon;
+		pack2.alt = alt;
 		pack4.gps_time_s = gps_time_s;
-		HAL_Delay(100);
+		pack4.gps_time_us = gps_time_us;
+		pack2.fix = fix_;
+
 		//каждые 750 мс берет температуру
 		if (HAL_GetTick()-start_time_ds >= 750)
 		{
@@ -323,8 +323,6 @@ int app_main(){
 			start_time_ds = HAL_GetTick();
 			pack2.ds_temp = ((float)temp_ds * 10) / 16;
 		}
-
-
 
 		switch (state_now)
 		{
@@ -339,20 +337,19 @@ int app_main(){
 			break;
 		case STATE_BEFORE_ROCKET:
 			//проверка признаков нахождения в ракете
-
 			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_IN_ROCKET;
 				limit_lux = (limit_lux - lux) * 0.8 + lux;
 				shift_reg_write_bit_16(&shift_reg_n, 10, true);
 				shift_reg_write_bit_16(&shift_reg_n, 11, false);
+				alpha = bb_chip_err(alpha_addr);
+				beta = bb_chip_err(beta_addr);
+				gamma = bb_chip_err(gamma_addr);
+				beta = bb_gps_err(beta_addr);
 			}
 			break;
 		case STATE_IN_ROCKET:
 			//передача данных на черные ящики и проверка фоторезистора
-			alpha = bb_chip_err(alpha_addr);
-			beta = bb_chip_err(beta_addr);
-			gamma = bb_chip_err(gamma_addr);
-			beta = bb_gps_err(beta_addr);
 			if(lux >=  limit_lux){
 				state_now = STATE_AFTER_ROCKET;
 				shift_reg_write_bit_16(&shift_reg_n, 10, true);
@@ -382,7 +379,7 @@ int app_main(){
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack3, sizeof(pack3), false);
 			fast_count++;
-			if(fast_count >= 10){
+			if(fast_count >= 2){
 				alpha = bb_write(alpha_addr, (uint8_t *)&pack1, sizeof(pack1));
 				alpha = bb_write(alpha_addr, (uint8_t *)&pack3, sizeof(pack3));
 				beta = bb_write(beta_addr, (uint8_t *)&pack1, sizeof(pack1));
@@ -410,7 +407,6 @@ int app_main(){
 			break;
 		case STATE_WAIT:
 			if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_2)== GPIO_PIN_RESET){
-
 				nrf24_irq_get(&nrf24, &comp);
 				nrf24_irq_clear(&nrf24, comp);
 				nrf24_fifo_status(&nrf24, &rx_status, &tx_status);
@@ -456,11 +452,10 @@ int app_main(){
 			gamma = bb_write(gamma_addr, (uint8_t *)&pack4, sizeof(pack4));
 			start_time_nrf = HAL_GetTick();
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack2, sizeof(pack2), false);
-			gamma = bb_radio_send(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
+			gamma = bb_radio_send_d(gamma_addr, (uint8_t *)&pack2, sizeof(pack2));
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
 			nrf24_fifo_write(&nrf24, (uint8_t *)&pack4, sizeof(pack4), false);
 
-			//  --> Тут ты добавил лишнее. Bytes, fatres и path ты уже создавал
 			if(res2 == FR_OK){
 				str_wr = sd_parse_to_bytes_pack2(str_buf, &pack2);
 				res2 = f_write(&File2, str_buf, str_wr, &Bytes); // отправка на запись в файл
