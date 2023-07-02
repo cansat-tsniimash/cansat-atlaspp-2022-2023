@@ -208,7 +208,7 @@ int app_main(){
 	nrf24_mode_power_down(&nrf24);
 	nrf24_rf_config_t nrf_config;
 	nrf_config.data_rate = NRF24_DATARATE_250_KBIT;
-	nrf_config.tx_power = NRF24_TXPOWER_MINUS_18_DBM;
+	nrf_config.tx_power = NRF24_TXPOWER_MINUS_6_DBM;
 	nrf_config.rf_channel = 35;
 	nrf24_setup_rf(&nrf24, &nrf_config);
 	nrf24_protocol_config_t nrf_protocol_config;
@@ -312,7 +312,7 @@ int app_main(){
 		nrf_pack.gps_time_s = time_s_;
 		nrf_pack.gps_time_us = time_us_;
 
-		int rc = its_i2c_link_read(&pack, sizeof(pack));
+		volatile int rc = its_i2c_link_read(&pack, sizeof(pack));
 
 		if (rc > 0)
 		{
@@ -470,11 +470,10 @@ int app_main(){
 				nrf_pack.crc = Crc16((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 				nrf_pack.num++;
 				nrf24_fifo_write(&nrf24, (uint8_t *)&nrf_pack, sizeof(nrf_pack), false);
-				start_time_nrf = HAL_GetTick();
+				time_nrf = HAL_GetTick();
 
-				memproxy_write((uint8_t *)&nrf_pack, sizeof(nrf_pack));
+				memproxy_write_gps((uint8_t *)&nrf_pack, sizeof(nrf_pack));
 			}
-			time_nrf = HAL_GetTick();
 		}
 		else
 			if (HAL_GetTick()-start_time_nrf >= 100)

@@ -307,6 +307,10 @@ int app_main(){
 
 		gps_work();
 		gps_get_coords(&cookie, &lat, &lon, &alt, &fix_);
+		if (fix_)
+			shift_reg_write_bit_16(&shift_reg_n, 12, true);
+		else
+			shift_reg_write_bit_16(&shift_reg_n, 12, false);
 		gps_get_time(&cookie, &gps_time_s, &gps_time_us);
 		pack2.lat = lat;
 		pack2.lon = lon;
@@ -328,6 +332,7 @@ int app_main(){
 		{
 		case STATE_READY:
 			//Связь с ЧЯ
+			HAL_Delay(100);
 			if(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_BEFORE_ROCKET;
 				limit_lux = lux;
