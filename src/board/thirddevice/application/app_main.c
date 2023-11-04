@@ -93,13 +93,15 @@ int app_main(){
 
 		if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10) == GPIO_PIN_SET){
 			if(is_mount != 0){
-				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, true);
-			} else {
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, false);
+			} else {
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, true);
 			}
 			// Alpha
 			count = 0;
+			int ncount = 0;
 			rc = bb_read_req(alpha_addr, 32, false);
+			HAL_Delay(5);
 			if (rc == HAL_OK)
 				rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
 			if(res_bin_a == FR_OK && rc == HAL_OK){
@@ -110,23 +112,31 @@ int app_main(){
 			if(rc == HAL_OK){
 				for(int i = 0; i < 2047; i++){
 					rc = bb_read_req(alpha_addr, 32, true);
+					HAL_Delay(5);
 					if (rc == HAL_OK)
+						rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
+					if (rc != HAL_OK)
 						rc = bb_read(alpha_addr, (uint8_t *)bufa, sizeof(bufa));
 					if(res_bin_a == FR_OK && rc == HAL_OK){
 						res_bin_a = f_write(&File_bin_alph, (uint8_t*)bufa, sizeof(bufa), &Bytes); // отправка на запись в файл
+						res_bin_a = f_sync(&File_bin_alph);
 
 						count++;
 					}
+					else
+						ncount++;
 				}
 				res_bin_a = f_sync(&File_bin_alph);
 			}
-			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_a, count, count);
+			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_a, count, ncount);
 			f_write(&File, str_buf, str_wr, &Bytes);
 			f_sync(&File);
 
 			count = 0;
+			ncount = 0;
 			// Beta
 			rc = bb_read_req(beta_addr, 32, false);
+			HAL_Delay(5);
 			if(rc == HAL_OK)
 				rc = bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
 			if(res_bin_b == FR_OK && rc == HAL_OK){
@@ -137,25 +147,36 @@ int app_main(){
 			if(rc == HAL_OK){
 				for(int i = 0; i<2047; i++){
 					rc = bb_read_req(beta_addr, 32, true);
+					HAL_Delay(5);
 					if(rc == HAL_OK)
 						rc = bb_read(beta_addr, (uint8_t *)bufb, sizeof(bufb));
+					if (rc != HAL_OK)
+						rc = bb_read(beta_addr, (uint8_t *)bufa, sizeof(bufa));
+					if (rc != HAL_OK)
+						rc = bb_read(beta_addr, (uint8_t *)bufa, sizeof(bufa));
 					if(res_bin_b == FR_OK && rc == HAL_OK){
 						res_bin_b = f_write(&File_bin_beta, (uint8_t*)bufb, sizeof(bufb), &Bytes); // отправка на запись в файл
 						res_bin_b = f_sync(&File_bin_beta);
 						count++;
 					}
+					else
+						ncount++;
 				}
 			}
-			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_b, count, count);
+			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_b, count, ncount);
 			f_write(&File, str_buf, str_wr, &Bytes);
 			f_sync(&File);
+			continue;
 			count = 0;
 			//beta gps
 			if(rc == HAL_OK){
 				for(uint16_t i = 0; i<2176; i++){
 					uint16_t num = i;
 					rc = bb_read_gps_req(beta_addr, num);
+					HAL_Delay(5);
 					if(rc == HAL_OK)
+						rc = bb_read_gps(beta_addr, &num, (uint8_t *)bufgps, sizeof(bufgps));
+					if (rc != HAL_OK)
 						rc = bb_read_gps(beta_addr, &num, (uint8_t *)bufgps, sizeof(bufgps));
 					if(res_bin_gps == FR_OK && rc == HAL_OK){
 						res_bin_gps = f_write(&File_bin_gps, (uint8_t*)bufgps, sizeof(bufgps), &Bytes); // отправка на запись в файл
@@ -169,8 +190,10 @@ int app_main(){
 			f_write(&File, str_buf, str_wr, &Bytes);
 			f_sync(&File);
 			count = 0;
+			ncount = 0;
 			//gamma
 			rc = bb_read_req(gamma_addr, 32, false);
+			HAL_Delay(5);
 			if(rc == HAL_OK)
 				rc = bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
 			if(res_bin_g == FR_OK){
@@ -181,16 +204,21 @@ int app_main(){
 			if(rc == HAL_OK){
 				for(int i = 0; i<2047; i++){
 					rc = bb_read_req(gamma_addr, 32, true);
+					HAL_Delay(5);
 					if(rc == HAL_OK)
 						rc = bb_read(gamma_addr, (uint8_t *)bufg, sizeof(bufg));
+					if (rc != HAL_OK)
+						rc = bb_read(gamma_addr, (uint8_t *)bufa, sizeof(bufa));
 					if(res_bin_g == FR_OK && rc == HAL_OK){
 						res_bin_g = f_write(&File_bin_gam, (uint8_t*)bufg, sizeof(bufg), &Bytes); // отправка на запись в файл
 						res_bin_g = f_sync(&File_bin_gam);
 						count++;
 					}
+					else
+						ncount++;
 				}
 			}
-			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_g, count, count);
+			str_wr = sd_parse_to_bytes_pack(str_buf, is_mount, res_bin_g, count, ncount);
     		f_write(&File, str_buf, str_wr, &Bytes);
 			f_sync(&File);
 			count = 0;

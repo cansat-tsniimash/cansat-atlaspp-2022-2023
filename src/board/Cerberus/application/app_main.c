@@ -269,6 +269,7 @@ int app_main(){
 	char str_buf[300];
 	char data[] = "Hello, World!";
 	gamma = bb_radio_send_d(gamma_addr, (uint8_t *)data, sizeof(data));
+	shift_reg_write_bit_16(&shift_reg_n, 12, false);
 	while(1){
 		alpha = bb_ping(alpha_addr);
 		beta = bb_ping(beta_addr);
@@ -307,10 +308,6 @@ int app_main(){
 
 		gps_work();
 		gps_get_coords(&cookie, &lat, &lon, &alt, &fix_);
-		if (fix_)
-			shift_reg_write_bit_16(&shift_reg_n, 12, true);
-		else
-			shift_reg_write_bit_16(&shift_reg_n, 12, false);
 		gps_get_time(&cookie, &gps_time_s, &gps_time_us);
 		pack2.lat = lat;
 		pack2.lon = lon;
@@ -345,12 +342,43 @@ int app_main(){
 			if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)){
 				state_now = STATE_IN_ROCKET;
 				limit_lux = (limit_lux - lux) * 0.8 + lux;
-				shift_reg_write_bit_16(&shift_reg_n, 10, true);
-				shift_reg_write_bit_16(&shift_reg_n, 11, false);
+
 				alpha = bb_chip_err(alpha_addr);
 				beta = bb_chip_err(beta_addr);
 				gamma = bb_chip_err(gamma_addr);
+				if (alpha != 0){
+					shift_reg_write_bit_16(&shift_reg_n, 12, true);
+					alpha = bb_buzzer_control(alpha_addr, true);
+					HAL_Delay(300);
+					alpha = bb_buzzer_control(alpha_addr, false);
+					HAL_Delay(200);
+
+				}
+				if (gamma != 0){
+					shift_reg_write_bit_16(&shift_reg_n, 12, true);
+					beta = bb_buzzer_control(gamma_addr, true);
+					HAL_Delay(300);
+					beta = bb_buzzer_control(gamma_addr, false);
+					HAL_Delay(200);
+								}
+				if (beta != 0){
+					shift_reg_write_bit_16(&shift_reg_n, 12, true);
+					beta = bb_buzzer_control(beta_addr, true);
+					HAL_Delay(300);
+					beta = bb_buzzer_control(beta_addr, false);
+					HAL_Delay(200);
+				}
 				beta = bb_gps_err(beta_addr);
+				if (beta != 0){
+					shift_reg_write_bit_16(&shift_reg_n, 12, true);
+					beta = bb_buzzer_control(beta_addr, true);
+					HAL_Delay(300);
+					beta = bb_buzzer_control(beta_addr, false);
+					HAL_Delay(200);
+				}
+				shift_reg_write_bit_16(&shift_reg_n, 10, true);
+				shift_reg_write_bit_16(&shift_reg_n, 11, false);
+
 			}
 			break;
 		case STATE_IN_ROCKET:

@@ -51,6 +51,7 @@ int bb_buzzer_control(uint16_t I2C_ADDRES, bool onoff)
 
 int bb_chip_err(uint16_t I2C_ADDRES)
 {
+	return 4;
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_CE;
@@ -74,6 +75,7 @@ int bb_chip_err(uint16_t I2C_ADDRES)
 
 int bb_gps_err(uint16_t I2C_ADDRES)
 {
+	return 4;
 	uint8_t cmd = I2C_LINK_CMD_SET_PACKET;
 	i2c_pack_t i2c_pack;
 	i2c_pack.num = CMD_CE_GPS;

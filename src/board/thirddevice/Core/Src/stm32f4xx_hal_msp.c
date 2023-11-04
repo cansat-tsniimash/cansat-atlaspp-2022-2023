@@ -97,9 +97,9 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
     __HAL_RCC_GPIOB_CLK_ENABLE();
     /**I2C1 GPIO Configuration
     PB6     ------> I2C1_SCL
-    PB7     ------> I2C1_SDA
+    PB9     ------> I2C1_SDA
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -133,11 +133,11 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
 
     /**I2C1 GPIO Configuration
     PB6     ------> I2C1_SCL
-    PB7     ------> I2C1_SDA
+    PB9     ------> I2C1_SDA
     */
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_6);
 
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_7);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_9);
 
   /* USER CODE BEGIN I2C1_MspDeInit 1 */
 
@@ -168,9 +168,12 @@ void HAL_SD_MspInit(SD_HandleTypeDef* hsd)
     /**SDIO GPIO Configuration
     PA6     ------> SDIO_CMD
     PB15     ------> SDIO_CK
-    PB4     ------> SDIO_D0
+    PA8     ------> SDIO_D1
+    PA9     ------> SDIO_D2
+    PB5     ------> SDIO_D3
+    PB7     ------> SDIO_D0
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_6;
+    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -184,7 +187,7 @@ void HAL_SD_MspInit(SD_HandleTypeDef* hsd)
     GPIO_InitStruct.Alternate = GPIO_AF12_SDIO;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin = GPIO_PIN_4;
+    GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -260,11 +263,14 @@ void HAL_SD_MspDeInit(SD_HandleTypeDef* hsd)
     /**SDIO GPIO Configuration
     PA6     ------> SDIO_CMD
     PB15     ------> SDIO_CK
-    PB4     ------> SDIO_D0
+    PA8     ------> SDIO_D1
+    PA9     ------> SDIO_D2
+    PB5     ------> SDIO_D3
+    PB7     ------> SDIO_D0
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_6);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9);
 
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_15|GPIO_PIN_4);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_15|GPIO_PIN_5|GPIO_PIN_7);
 
     /* SDIO DMA DeInit */
     HAL_DMA_DeInit(hsd->hdmarx);

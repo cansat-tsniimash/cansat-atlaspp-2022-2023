@@ -356,7 +356,7 @@ int app_main(){
 					{
 						addr_read = 0x0000;
 						uint8_t size = pack.data[0];
-						mx25l512_read(&bus_data, &addr_read, read_buf, 256);//читаю данные
+						mx25l512_read(&bus_gps, &addr_read, read_buf, 256);//читаю данные
 						memcpy(pack.data, read_buf, size);
 						addr_read = size;
 						pack.size = size;
@@ -370,13 +370,13 @@ int app_main(){
 						uint8_t size = pack.data[0];
 						if(addr_read + size < 0xffff){
 							uint32_t new_addr = addr_read & 0xFF00;
-							mx25l512_read(&bus_data, &new_addr, read_buf, 256);//читаю данные
+							mx25l512_read(&bus_gps, &new_addr, read_buf, 256);//читаю данные
 							if (((addr_read & 0xFF) + size) > 0xFF)
 							{
 								uint8_t part = 0xFF - (addr_read & 0xFF) + 1;
 								memcpy(pack.data, read_buf + (addr_read & 0xFF), part);
 								new_addr = (addr_read + size) & 0xFF00;
-								mx25l512_read(&bus_data, &new_addr, read_buf, 256);
+								mx25l512_read(&bus_gps, &new_addr, read_buf, 256);
 								memcpy(pack.data + part, read_buf + 1, size - part);
 								addr_read += 1;
 							}
